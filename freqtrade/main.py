@@ -21,7 +21,7 @@ from freqtrade.persistence import Trade
 logger = logging.getLogger('freqtrade')
 
 _CONF = {}
-
+_BLACKLIST = set()
 
 def refresh_whitelist(whitelist: Optional[List[str]] = None) -> None:
     """
@@ -40,7 +40,7 @@ def refresh_whitelist(whitelist: Optional[List[str]] = None) -> None:
         if status['IsActive']:
             sanitized_whitelist.append(pair)
         else:
-            logger.info(
+            logger.debug(
                 'Ignoring %s from whitelist (reason: %s).',
                 pair, status.get('Notice') or 'wallet is not active'
             )
@@ -72,7 +72,7 @@ def _process(dynamic_whitelist: Optional[int] = 0) -> bool:
                 # Create entity and execute trade
                 state_changed = create_trade(float(_CONF['stake_amount']))
                 if not state_changed:
-                    logger.info(
+                    logger.debug(
                         'Checked all whitelisted currencies. '
                         'Found no suitable entry positions for buying. Will keep looking ...'
                     )
@@ -97,13 +97,18 @@ def _process(dynamic_whitelist: Optional[int] = 0) -> bool:
             error
         )
         time.sleep(30)
-    except OperationalException:
-        rpc.send_msg('*Status:* Got OperationalException:\n```\n{traceback}```{hint}'.format(
-            traceback=traceback.format_exc(),
-            hint='Issue `/start` if you think it is safe to restart.'
-        ))
-        logger.exception('Got OperationalException. Stopping trader ...')
-        update_state(State.STOPPED)
+    except OperationalException as ex:
+        logger.exception('Got OperationalException')
+        if "APIKEY_INVALID" in str(ex):
+            rpc.send_msg("Got APIKEY_INVALID. Sleeping for 30 sec")
+            time.sleep(30)
+        else:
+            rpc.send_msg('*Status:* Got OperationalException:\n```\n{traceback}```{hint}'.format(
+                traceback=traceback.format_exc(),
+                hint='Issue `/start` if you think it is safe to restart.'
+            ))
+            logger.info('Stopping trader ...')
+            update_state(State.STOPPED)
     return state_changed
 
 
@@ -190,7 +195,7 @@ def create_trade(stake_amount: float) -> bool:
     :param stake_amount: amount of btc to spend
     :return: True if a trade object has been created and persisted, False otherwise
     """
-    logger.info(
+    logger.debug(
         'Checking buy signals to create a new trade with stake_amount: %f ...',
         stake_amount
     )
@@ -211,6 +216,9 @@ def create_trade(stake_amount: float) -> bool:
 
     # Pick pair based on StochRSI buy signals
     for _pair in whitelist:
+        if _pair in _BLACKLIST:
+            logger.debug("Skip blacklisted pair: {}".format(_pair))
+            continue
         if get_signal(_pair, SignalType.BUY):
             pair = _pair
             break
@@ -221,7 +229,17 @@ def create_trade(stake_amount: float) -> bool:
     buy_limit = get_target_bid(exchange.get_ticker(pair))
     amount = stake_amount / buy_limit
 
-    order_id = exchange.buy(pair, buy_limit, amount)
+    try:
+        order_id = exchange.buy(pair, buy_limit, amount)
+    except OperationalException as ex:
+        if "MIN_TRADE_REQUIREMENT_NOT_MET" in str(ex):
+            rpc.send_msg('Blacklisting pair due to min trade limit error: {}'.format(pair))
+            _BLACKLIST.add(pair)
+            logger.info('Add pair %s to blacklist', pair)
+            return False
+        else:
+            raise ex
+
     # Create trade entity and return
     rpc.send_msg('*{}:* Buying [{}]({}) with limit `{:.8f}`'.format(
         exchange.get_name().upper(),
