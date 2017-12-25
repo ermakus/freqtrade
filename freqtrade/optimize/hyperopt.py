@@ -11,11 +11,13 @@ from operator import itemgetter
 from hyperopt import fmin, tpe, hp, Trials, STATUS_OK
 from hyperopt.mongoexp import MongoTrials
 from pandas import DataFrame
+import numpy as np
 
 from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex
 from freqtrade.misc import load_config
 from freqtrade.optimize.backtesting import backtest
+from freqtrade.optimize.hyperopt_conf import hyperopt_optimize_conf
 from freqtrade.vendor.qtpylib.indicators import crossed_above
 
 # Remove noisy log messages
@@ -30,24 +32,17 @@ TARGET_TRADES = 1100
 TOTAL_TRIES = None
 _CURRENT_TRIES = 0
 
-TOTAL_PROFIT_TO_BEAT = 3
-AVG_PROFIT_TO_BEAT = 0.2
-AVG_DURATION_TO_BEAT = 50
+TOTAL_PROFIT_TO_BEAT = 0
+AVG_PROFIT_TO_BEAT = 0
+AVG_DURATION_TO_BEAT = 100
+
+# this is expexted avg profit * expected trade count
+# for example 3.5%, 1100 trades, EXPECTED_MAX_PROFIT = 3.85
+EXPECTED_MAX_PROFIT = 3.85
 
 # Configuration and data used by hyperopt
-PROCESSED = []
-OPTIMIZE_CONFIG = {
-    'max_open_trades': 3,
-    'stake_currency': 'BTC',
-    'stake_amount': 0.01,
-    'minimal_roi': {
-        '40':  0.0,
-        '30':  0.01,
-        '20':  0.02,
-        '0':  0.04,
-    },
-    'stoploss': -0.10,
-}
+PROCESSED = optimize.preprocess(optimize.load_data())
+OPTIMIZE_CONFIG = hyperopt_optimize_conf()
 
 # Monkey patch config
 from freqtrade import main  # noqa
@@ -110,12 +105,10 @@ def log_results(results):
     current_try = results['current_tries']
     total_tries = results['total_tries']
     result = results['result']
-    profit = results['total_profit'] / 1000
-
-    outcome = '{:5d}/{}: {}'.format(current_try, total_tries, result)
+    profit = results['total_profit']
 
     if profit >= TOTAL_PROFIT_TO_BEAT:
-        logger.info(outcome)
+        logger.info('\n{:5d}/{}: {}'.format(current_try, total_tries, result))
     else:
         print('.', end='')
         sys.stdout.flush()
@@ -127,15 +120,15 @@ def optimizer(params):
     from freqtrade.optimize import backtesting
     backtesting.populate_buy_trend = buy_strategy_generator(params)
 
-    results = backtest(OPTIMIZE_CONFIG, PROCESSED)
+    results = backtest(OPTIMIZE_CONFIG['stake_amount'], PROCESSED)
 
     result = format_results(results)
 
-    total_profit = results.profit_percent.sum() * 1000
+    total_profit = results.profit_percent.sum()
     trade_count = len(results.index)
 
     trade_loss = 1 - 0.35 * exp(-(trade_count - TARGET_TRADES) ** 2 / 10 ** 5.2)
-    profit_loss = max(0, 1 - total_profit / 10000)  # max profit 10000
+    profit_loss = max(0, 1 - total_profit / EXPECTED_MAX_PROFIT)
 
     _CURRENT_TRIES += 1
 
@@ -151,25 +144,29 @@ def optimizer(params):
         'result': result,
         'results': results
     }
-
-    # logger.info('{:5d}/{}: {}'.format(_CURRENT_TRIES, TOTAL_TRIES, result))
     log_results(result_data)
 
     return {
         'loss': trade_loss + profit_loss,
         'status': STATUS_OK,
-        'result': result
+        'result': result,
+        'total_profit': total_profit,
+        'avg_profit': result_data['avg_profit'],
     }
 
 
 def format_results(results: DataFrame):
     return ('Made {:6d} buys. Average profit {: 5.2f}%. '
-            'Total profit was {: 7.3f}. Average duration {:5.1f} mins.').format(
+            'Total profit was {: 11.8f} BTC. Average duration {:5.1f} mins.').format(
                 len(results.index),
                 results.profit_percent.mean() * 100.0,
                 results.profit_BTC.sum(),
                 results.duration.mean() * 5,
     )
+
+
+def filter_nan(result, filter_key):
+    return [r for r in result if not np.isnan(r[filter_key])]
 
 
 def buy_strategy_generator(params):
@@ -246,5 +243,10 @@ def start(args):
 
     best = fmin(fn=optimizer, space=SPACE, algo=tpe.suggest, max_evals=TOTAL_TRIES, trials=trials)
     logger.info('Best parameters:\n%s', json.dumps(best, indent=4))
-    results = sorted(trials.results, key=itemgetter('loss'))
+
+    filt_res = filter_nan(trials.results, 'total_profit')
+    filt_res = filter_nan(filt_res, 'avg_profit')
+
+    results = sorted(filt_res, key=itemgetter('loss'))
+
     logger.info('Best Result:\n%s', results[0]['result'])
