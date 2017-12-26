@@ -1,10 +1,27 @@
 # pragma pylint: disable=missing-docstring,W0212
 
 import os
+import pandas as pd
 from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex
-from freqtrade.optimize.backtesting import backtest
+from freqtrade.optimize.backtesting import backtest, generate_text_table
 from freqtrade.optimize.__init__ import testdata_path, download_pairs, download_backtesting_testdata
+
+
+def test_generate_text_table():
+    results = pd.DataFrame(
+        {
+            'currency': ['BTC_ETH', 'BTC_ETH'],
+            'profit_percent': [0.1, 0.2],
+            'profit_BTC': [0.2, 0.4],
+            'duration': [10, 30]
+        }
+    )
+    assert generate_text_table({'BTC_ETH': {}}, results, 'BTC', 5) == (
+        'pair       buy count  avg profit    total profit      avg duration\n'
+        '-------  -----------  ------------  --------------  --------------\n'
+        'BTC_ETH            2  15.00%        0.60000000 BTC             100\n'
+        'TOTAL              2  15.00%        0.60000000 BTC             100')
 
 
 def test_backtest(default_conf, mocker):
