@@ -123,8 +123,7 @@ def optimizer(params):
     backtesting.populate_buy_trend = buy_strategy_generator(params)
 
     results = backtest(OPTIMIZE_CONFIG['stake_amount'], PROCESSED)
-
-    result = format_results(results)
+    result_explanation = format_results(results)
 
     total_profit = results.profit_percent.sum()
     trade_count = len(results.index)
@@ -144,13 +143,13 @@ def optimizer(params):
         'loss': loss,
         'current_tries': _CURRENT_TRIES,
         'total_tries': TOTAL_TRIES,
-        'result': result,
+        'result': result_explanation,
     })
 
     return {
         'loss': loss,
         'status': STATUS_OK,
-        'result': result,
+        'result': result_explanation,
         'total_profit': total_profit,
         'avg_profit': results.profit_percent.mean() * 100.0,
     }
