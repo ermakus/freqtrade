@@ -139,13 +139,12 @@ def optimizer(params):
 
     _CURRENT_TRIES += 1
 
-    result_data = {
+    log_results({
         'loss': loss,
         'current_tries': _CURRENT_TRIES,
         'total_tries': TOTAL_TRIES,
         'result': result,
-    }
-    log_results(result_data)
+    })
 
     return {
         'loss': loss,
