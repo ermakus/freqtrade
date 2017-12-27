@@ -4,7 +4,7 @@ from typing import List, Dict
 from bittrex.bittrex import Bittrex as _Bittrex, API_V2_0, API_V1_1
 from requests.exceptions import ContentDecodingError
 
-from freqtrade import OperationalException
+from freqtrade import OperationalException, TradeException
 from freqtrade.exchange.interface import Exchange
 
 logger = logging.getLogger(__name__)
@@ -45,8 +45,16 @@ class Bittrex(Exchange):
         Validates the given bittrex response
         and raises a ContentDecodingError if a non-fatal issue happened.
         """
-        if response['message'] == 'NO_API_RESPONSE':
-            raise ContentDecodingError('Unable to decode bittrex response')
+        temp_error_messages = [
+            'NO_API_RESPONSE',
+            'APIKEY_INVALID',
+        ]
+
+        if response['message'] in temp_error_messages:
+            raise ContentDecodingError('Temporary error: {}'.format(response['message']))
+
+        if response['message'] == 'MIN_TRADE_REQUIREMENT_NOT_MET':
+            raise TradeException('Market error: {}'.format(response['message']))
 
     @property
     def fee(self) -> float:

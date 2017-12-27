@@ -14,3 +14,9 @@ class OperationalException(BaseException):
     Requires manual intervention.
     This happens when an exchange returns an unexpected error during runtime.
     """
+
+class TradeException(BaseException):
+    """
+    Market should be blacklisted
+    This happens whne trade requirements not met, i.e. 
+    """

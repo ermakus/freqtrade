@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+import asyncio
 import copy
 import json
 import logging
 import sys
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, Optional, List
 
@@ -12,7 +14,7 @@ import requests
 from cachetools import cached, TTLCache
 
 from freqtrade import __version__, exchange, persistence, rpc, DependencyException, \
-    OperationalException
+    OperationalException, TradeException
 from freqtrade.analyze import get_signal, SignalType
 from freqtrade.misc import State, get_state, update_state, parse_args, throttle, \
     load_config
@@ -76,8 +78,8 @@ def _process(dynamic_whitelist: Optional[int] = 0) -> bool:
                         'Checked all whitelisted currencies. '
                         'Found no suitable entry positions for buying. Will keep looking ...'
                     )
-            except DependencyException as e:
-                logger.warning('Unable to create trade: %s', e)
+            except DependencyException as exception:
+                logger.warning('Unable to create trade: %s', exception)
 
         for trade in trades:
             # Get order details for actual price per unit
@@ -91,24 +93,23 @@ def _process(dynamic_whitelist: Optional[int] = 0) -> bool:
                 state_changed = handle_trade(trade) or state_changed
 
             Trade.session.flush()
+
     except (requests.exceptions.RequestException, json.JSONDecodeError) as error:
         logger.warning(
             'Got %s in _process(), retrying in 30 seconds...',
             error
         )
         time.sleep(30)
+
     except OperationalException as ex:
         logger.exception('Got OperationalException')
-        if "APIKEY_INVALID" in str(ex):
-            rpc.send_msg("Got APIKEY_INVALID. Sleeping for 30 sec")
-            time.sleep(30)
-        else:
-            rpc.send_msg('*Status:* Got OperationalException:\n```\n{traceback}```{hint}'.format(
-                traceback=traceback.format_exc(),
-                hint='Issue `/start` if you think it is safe to restart.'
-            ))
-            logger.info('Stopping trader ...')
-            update_state(State.STOPPED)
+        rpc.send_msg('*Status:* Got OperationalException:\n```\n{traceback}```{hint}'.format(
+            traceback=traceback.format_exc(),
+            hint='Issue `/start` if you think it is safe to restart.'
+        ))
+        logger.info('Stopping trader ...')
+        update_state(State.STOPPED)
+
     return state_changed
 
 
@@ -211,15 +212,26 @@ def create_trade(stake_amount: float) -> bool:
         if trade.pair in whitelist:
             whitelist.remove(trade.pair)
             logger.debug('Ignoring %s in pair whitelist', trade.pair)
+
+    for _pair in _BLACKLIST:
+        if _pair in whitelist:
+            whitelist.remove(_pair)
+            logger.debug('Ignoring %s in pair blacklist', trade.pair)
+
     if not whitelist:
         raise DependencyException('No pair in whitelist')
 
-    # Pick pair based on StochRSI buy signals
-    for _pair in whitelist:
-        if _pair in _BLACKLIST:
-            logger.debug("Skip blacklisted pair: {}".format(_pair))
-            continue
-        if get_signal(_pair, SignalType.BUY):
+    with ThreadPoolExecutor() as pool:
+        awaitable_signals = [
+            asyncio.wrap_future(pool.submit(get_signal, pair, SignalType.BUY))
+            for pair in whitelist
+        ]
+
+    loop = asyncio.get_event_loop()
+    signals = loop.run_until_complete(asyncio.gather(*awaitable_signals))
+
+    for idx, _pair in enumerate(whitelist):
+        if signals[idx]:
             pair = _pair
             break
     else:
@@ -231,14 +243,11 @@ def create_trade(stake_amount: float) -> bool:
 
     try:
         order_id = exchange.buy(pair, buy_limit, amount)
-    except OperationalException as ex:
-        if "MIN_TRADE_REQUIREMENT_NOT_MET" in str(ex):
-            rpc.send_msg('Blacklisting pair due to min trade limit error: {}'.format(pair))
-            _BLACKLIST.add(pair)
-            logger.info('Add pair %s to blacklist', pair)
-            return False
-        else:
-            raise ex
+    except TradeException as ex:
+        rpc.send_msg('Blacklisting {} pair due to {}'.format(pair, ex))
+        _BLACKLIST.add(pair)
+        logger.warning('Add pair %s to blacklist', pair)
+        return False
 
     # Create trade entity and return
     rpc.send_msg('*{}:* Buying [{}]({}) with limit `{:.8f}`'.format(
@@ -298,8 +307,7 @@ def gen_pair_whitelist(base_currency: str, topn: int = 20, key: str = 'BaseVolum
         reverse=True
     )
 
-    # topn must be greater than 0
-    if not topn > 0:
+    if topn <= 0:
         topn = 20
 
     pairs = [s['MarketName'].replace('-', '_') for s in summaries[:topn]]
