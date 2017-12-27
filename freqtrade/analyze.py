@@ -55,6 +55,7 @@ def populate_indicators(dataframe: DataFrame) -> DataFrame:
     dataframe['ema10'] = ta.EMA(dataframe, timeperiod=10)
     dataframe['ema50'] = ta.EMA(dataframe, timeperiod=50)
     dataframe['ema100'] = ta.EMA(dataframe, timeperiod=100)
+    dataframe['ema150'] = ta.EMA(dataframe, timeperiod=150)
     dataframe['ao'] = awesome_oscillator(dataframe)
     macd = ta.MACD(dataframe)
     dataframe['macd'] = macd['macd']
@@ -76,6 +77,16 @@ def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
     :param dataframe: DataFrame
     :return: DataFrame with buy column
     """
+    dataframe.loc[
+        (
+            (dataframe['fastd'] < 44) &
+            (dataframe['rsi'] < 34) &
+            (dataframe['ema50'] > dataframe['ema150'])
+        ),
+        'buy'] = 1
+    return dataframe
+
+def populate_buy_trend_orig(dataframe: DataFrame) -> DataFrame:
     dataframe.loc[
         (
             (dataframe['rsi'] < 35) &
