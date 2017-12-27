@@ -302,7 +302,9 @@ def gen_pair_whitelist(base_currency: str, topn: int = 20, key: str = 'BaseVolum
     if not topn > 0:
         topn = 20
 
-    return [s['MarketName'].replace('-', '_') for s in summaries[:topn]]
+    pairs = [s['MarketName'].replace('-', '_') for s in summaries[:topn]]
+    logger.info("Trading pairs: {}".format(pairs))
+    return pairs
 
 
 def cleanup() -> None:
