@@ -7,7 +7,7 @@ from multiprocessing import Value
 
 logger = logging.getLogger('freqtrade.watchdog')
 
-WATCHDOG_TIMEOUT=10
+WATCHDOG_TIMEOUT=300
 
 class Watchdog:
 
