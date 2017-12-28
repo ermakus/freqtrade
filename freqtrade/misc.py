@@ -126,6 +126,12 @@ def parse_args(args: List[str]):
         action='store_true',
         dest='dry_run_db',
     )
+    parser.add_argument(
+        '-w', '--watchdog',
+        help='Run under watchdog (restart process if main loop is stalled)',  # noqa
+        action='store_true',
+        dest='watchdog_enable',
+    )
     build_subcommands(parser)
     parsed_args = parser.parse_args(args)
 
