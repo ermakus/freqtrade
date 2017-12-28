@@ -68,6 +68,8 @@ class CryptoToFiatConverter():
         :param fiat_symbol: fiat to convert to
         :return: float, value in fiat of the crypto-currency amount
         """
+        if fiat_symbol == "NUL":
+            return 0
         price = self.get_price(crypto_symbol=crypto_symbol, fiat_symbol=fiat_symbol)
         return float(crypto_amount) * float(price)
 
