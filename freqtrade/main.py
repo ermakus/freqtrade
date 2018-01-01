@@ -343,6 +343,7 @@ def gen_pair_whitelist(base_currency: str, key: str = 'BaseVolume') -> List[str]
     logger.info("Trading pairs: {}".format(pairs))
     return pairs
 
+
 def cleanup() -> None:
     """
     Cleanup the application state und finish all pending tasks
@@ -422,7 +423,7 @@ def main() -> None:
                 )
             old_state = new_state
             watchdog.heartbeat()
-            
+
     except KeyboardInterrupt:
         logger.info('Got SIGINT, aborting ...')
     except BaseException:

@@ -15,8 +15,9 @@ class OperationalException(BaseException):
     This happens when an exchange returns an unexpected error during runtime.
     """
 
+
 class TradeException(BaseException):
     """
     Market should be blacklisted
-    This happens whne trade requirements not met, i.e. 
+    This happens when trade requirements not met, i.e. MIN_TRADE_REQUIREMENT_NOT_MET
     """

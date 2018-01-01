@@ -86,6 +86,7 @@ def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
         'buy'] = 1
     return dataframe
 
+
 def populate_buy_trend_orig(dataframe: DataFrame) -> DataFrame:
     dataframe.loc[
         (

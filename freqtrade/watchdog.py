@@ -1,17 +1,17 @@
 import os
 import signal
 import time
-import datetime
 import logging
 from multiprocessing import Value
 
 logger = logging.getLogger('freqtrade.watchdog')
 
-WATCHDOG_TIMEOUT=300
+WATCHDOG_TIMEOUT = 300
+
 
 class Watchdog:
 
-    shared_heartbeat = Value('d',0.0)
+    shared_heartbeat = Value('d', 0.0)
     kill_signal = None
 
     def heartbeat(self) -> None:
@@ -19,12 +19,12 @@ class Watchdog:
         self.shared_heartbeat.value = time.time()
 
     def exit_gracefully(self, signum, frame):
-        logger.warning("Kill signal: {}".format( signum ) )
-        self.kill_signal = signum 
+        logger.warning("Kill signal: {}".format(signum))
+        self.kill_signal = signum
 
     def kill(self, pid):
         logger.info("Stopping pid {}".format(pid))
-        os.kill(pid, signal.SIGTERM) # Better use sigint and then sigterm?
+        os.kill(pid, signal.SIGTERM)  # Better use sigint and then sigterm?
         os.wait()
 
     def start(self) -> bool:
@@ -52,8 +52,6 @@ class Watchdog:
                 if self.kill_signal:
                     raise KeyboardInterrupt()
 
-                #logger.debug("Heartbeat lag: {}".format(time.time() - self.shared_heartbeat.value))
-
                 timeout = time.time() - self.shared_heartbeat.value
 
                 if timeout > WATCHDOG_TIMEOUT:
@@ -66,7 +64,7 @@ class Watchdog:
                         signal.signal(signal.SIGTERM, self.orig_SIGTERM)
                         return True
                     else:
-                        pid = new_pid 
+                        pid = new_pid
 
                 time.sleep(1)
 
