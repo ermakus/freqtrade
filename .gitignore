@@ -2,7 +2,6 @@
 freqtrade/tests/testdata/*.json
 hyperopt_conf.py
 config.*json
-trade
 *.sqlite
 .hyperopt
 logfile.txt

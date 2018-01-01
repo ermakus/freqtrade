@@ -1,0 +1,1 @@
+./bin/trade --dynamic-whitelist --dry-run-db -w $*

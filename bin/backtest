@@ -1,0 +1,1 @@
+./bin/trade -c config.json backtesting --realistic-simulation
