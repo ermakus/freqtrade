@@ -50,7 +50,7 @@ def init(config: dict) -> None:
         CommandHandler('balance', _balance),
         CommandHandler('start', _start),
         CommandHandler('stop', _stop),
-        CommandHandler('forcesell', _forcesell),
+        CommandHandler('sell', _sell),
         CommandHandler('performance', _performance),
         CommandHandler('daily', _daily),
         CommandHandler('count', _count),
@@ -424,9 +424,9 @@ def _stop(bot: Bot, update: Update) -> None:
 
 
 @authorized_only
-def _forcesell(bot: Bot, update: Update) -> None:
+def _sell(bot: Bot, update: Update) -> None:
     """
-    Handler for /forcesell <id>.
+    Handler for /sell <id>.
     Sells the given trade at current price
     :param bot: telegram bot
     :param update: message update
@@ -436,11 +436,11 @@ def _forcesell(bot: Bot, update: Update) -> None:
         send_msg('`trader is not running`', bot=bot)
         return
 
-    trade_id = update.message.text.replace('/forcesell', '').strip()
+    trade_id = update.message.text.replace('/sell', '').strip()
     if trade_id == 'all':
         # Execute sell for all open orders
         for trade in Trade.query.filter(Trade.is_open.is_(True)).all():
-            _exec_forcesell(trade)
+            _exec_sell(trade)
         return
 
     # Query for trade
@@ -450,10 +450,10 @@ def _forcesell(bot: Bot, update: Update) -> None:
     )).first()
     if not trade:
         send_msg('Invalid argument. See `/help` to view usage')
-        logger.warning('/forcesell: Invalid argument received')
+        logger.warning('/sell: Invalid argument received')
         return
 
-    _exec_forcesell(trade)
+    _exec_sell(trade)
 
 
 @authorized_only
@@ -525,7 +525,7 @@ def _help(bot: Bot, update: Update) -> None:
 */status [table]:* `Lists all open trades`
             *table :* `will display trades in a table`
 */profit:* `Lists cumulative profit from all finished trades`
-*/forcesell <trade_id>|all:* `Instantly sells the given trade or all trades, regardless of profit`
+*/sell <trade_id>|all:* `Instantly sells the given trade or all trades, regardless of profit`
 */performance:* `Show performance of each finished trade grouped by pair`
 */daily <n>:* `Shows profit or loss per day, over the last n days`
 */count:* `Show number of trades running compared to allowed number of trades`
@@ -560,7 +560,7 @@ def shorten_date(_date):
     return new_date
 
 
-def _exec_forcesell(trade: Trade) -> None:
+def _exec_sell(trade: Trade) -> None:
     # Check if there is there is an open order
     if trade.open_order_id:
         order = exchange.get_order(trade.open_order_id)
