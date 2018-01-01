@@ -28,19 +28,17 @@ _CONF = {}
 _BLACKLIST = set()
 
 
-def refresh_whitelist(whitelist: Optional[List[str]] = None) -> None:
+def refresh_whitelist(whitelist: List[str]) -> List[str]:
     """
     Check wallet health and remove pair from whitelist if necessary
-    :param whitelist: a new whitelist (optional)
-    :return: None
+    :param whitelist: the pair the user might want to trade
+    :return: the list of pairs the user wants to trade without the one unavailable or black_listed
     """
-    whitelist = whitelist or _CONF['exchange']['pair_whitelist']
-
     sanitized_whitelist = []
     health = exchange.get_wallet_health()
     for status in health:
         pair = '{}_{}'.format(_CONF['stake_currency'], status['Currency'])
-        if pair not in whitelist:
+        if pair not in whitelist or pair in _CONF['exchange'].get('pair_blacklist', []):
             continue
         if status['IsActive']:
             sanitized_whitelist.append(pair)
@@ -49,27 +47,29 @@ def refresh_whitelist(whitelist: Optional[List[str]] = None) -> None:
                 'Ignoring %s from whitelist (reason: %s).',
                 pair, status.get('Notice') or 'wallet is not active'
             )
-    if _CONF['exchange']['pair_whitelist'] != sanitized_whitelist:
-        logger.debug('Using refreshed pair whitelist: %s ...', sanitized_whitelist)
-        _CONF['exchange']['pair_whitelist'] = sanitized_whitelist
+    return sanitized_whitelist
 
 
-def _process(dynamic_whitelist: Optional[int] = 0) -> bool:
+def _process(nb_assets: Optional[int] = 0) -> bool:
     """
     Queries the persistence layer for open trades and handles them,
     otherwise a new trade is created.
-    :param: dynamic_whitelist: True is a dynamic whitelist should be generated (optional)
+    :param: nb_assets: the maximum number of pairs to be traded at the same time
     :return: True if a trade has been created or closed, False otherwise
     """
     state_changed = False
     try:
         # Refresh whitelist based on wallet maintenance
-        refresh_whitelist(
+        sanitized_list = refresh_whitelist(
             gen_pair_whitelist(
-                _CONF['stake_currency'],
-                topn=dynamic_whitelist
-            ) if dynamic_whitelist else None
+                _CONF['stake_currency']
+            ) if nb_assets else _CONF['exchange']['pair_whitelist']
         )
+
+        # Keep only the subsets of pairs wanted (up to nb_assets)
+        final_list = sanitized_list[:nb_assets] if nb_assets else sanitized_list
+        _CONF['exchange']['pair_whitelist'] = final_list
+
         # Query trades from persistence layer
         trades = Trade.query.filter(Trade.is_open.is_(True)).all()
         if len(trades) < _CONF['max_open_trades']:
@@ -130,26 +130,39 @@ def execute_sell(trade: Trade, limit: float) -> None:
     fmt_exp_profit = round(trade.calc_profit_percent(rate=limit) * 100, 2)
     profit_trade = trade.calc_profit(rate=limit)
 
-    fiat_converter = CryptoToFiatConverter()
-    profit_fiat = fiat_converter.convert_amount(
-        profit_trade,
-        _CONF['stake_currency'],
-        _CONF['fiat_display_currency']
-    )
+    message = '*{exchange}:* Selling [{pair}]({pair_url}) with limit `{limit:.8f}`'.format(
+                    exchange=trade.exchange,
+                    pair=trade.pair.replace('_', '/'),
+                    pair_url=exchange.get_pair_detail_url(trade.pair),
+                    limit=limit
+                )
 
-    rpc.send_msg('*{exchange}:* Selling [{pair}]({pair_url}) with limit `{limit:.8f}`'
-                 '` (profit: ~{profit_percent:.2f}%, {profit_coin:.8f} {coin}`'
-                 '` / {profit_fiat:.3f} {fiat})`'.format(
-                        exchange=trade.exchange,
-                        pair=trade.pair.replace('_', '/'),
-                        pair_url=exchange.get_pair_detail_url(trade.pair),
-                        limit=limit,
+    # For regular case, when the configuration exists
+    if 'stake_currency' in _CONF and 'fiat_display_currency' in _CONF:
+        fiat_converter = CryptoToFiatConverter()
+        profit_fiat = fiat_converter.convert_amount(
+            profit_trade,
+            _CONF['stake_currency'],
+            _CONF['fiat_display_currency']
+        )
+        message += '` (profit: ~{profit_percent:.2f}%, {profit_coin:.8f} {coin}`' \
+                   '` / {profit_fiat:.3f} {fiat})`'.format(
                         profit_percent=fmt_exp_profit,
                         profit_coin=profit_trade,
                         coin=_CONF['stake_currency'],
                         profit_fiat=profit_fiat,
                         fiat=_CONF['fiat_display_currency'],
-                    ))
+                   )
+    # Because telegram._forcesell does not have the configuration
+    # Ignore the FIAT value and does not show the stake_currency as well
+    else:
+        message += '` (profit: ~{profit_percent:.2f}%, {profit_coin:.8f})`'.format(
+            profit_percent=fmt_exp_profit,
+            profit_coin=profit_trade
+        )
+
+    # Send the message
+    rpc.send_msg(message)
     Trade.session.flush()
 
 
@@ -185,17 +198,20 @@ def handle_trade(trade: Trade) -> bool:
     current_rate = exchange.get_ticker(trade.pair)['bid']
 
     # Check if minimal roi has been reached
-    if not min_roi_reached(trade, current_rate, datetime.utcnow()):
-        return False
+    if min_roi_reached(trade, current_rate, datetime.utcnow()):
+        logger.debug('Executing sell due to ROI ...')
+        execute_sell(trade, current_rate)
+        return True
 
     # Check if sell signal has been enabled and triggered
     if _CONF.get('experimental', {}).get('use_sell_signal'):
         logger.debug('Checking sell_signal ...')
-        if not get_signal(trade.pair, SignalType.SELL):
-            return False
+        if get_signal(trade.pair, SignalType.SELL):
+            logger.debug('Executing sell due to sell signal ...')
+            execute_sell(trade, current_rate)
+            return True
 
-    execute_sell(trade, current_rate)
-    return True
+    return False
 
 
 def get_target_bid(ticker: Dict[str, float]) -> float:
@@ -310,11 +326,10 @@ def init(config: dict, db_url: Optional[str] = None) -> None:
 
 
 @cached(TTLCache(maxsize=1, ttl=1800))
-def gen_pair_whitelist(base_currency: str, topn: int = 20, key: str = 'BaseVolume') -> List[str]:
+def gen_pair_whitelist(base_currency: str, key: str = 'BaseVolume') -> List[str]:
     """
     Updates the whitelist with with a dynamically generated list
     :param base_currency: base currency as str
-    :param topn: maximum number of returned results, must be greater than 0
     :param key: sort key (defaults to 'BaseVolume')
     :return: List of pairs
     """
@@ -324,13 +339,9 @@ def gen_pair_whitelist(base_currency: str, topn: int = 20, key: str = 'BaseVolum
         reverse=True
     )
 
-    if topn <= 0:
-        topn = 20
-
-    pairs = [s['MarketName'].replace('-', '_') for s in summaries[:topn]]
+    pairs = [s['MarketName'].replace('-', '_') for s in summaries]
     logger.info("Trading pairs: {}".format(pairs))
     return pairs
-
 
 def cleanup() -> None:
     """
@@ -407,7 +418,7 @@ def main() -> None:
                 throttle(
                     _process,
                     min_secs=_CONF['internals'].get('process_throttle_secs', 10),
-                    dynamic_whitelist=args.dynamic_whitelist,
+                    nb_assets=args.dynamic_whitelist,
                 )
             old_state = new_state
             watchdog.heartbeat()

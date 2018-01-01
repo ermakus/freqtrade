@@ -14,8 +14,8 @@ from freqtrade.misc import update_state, State, get_state
 from freqtrade.persistence import Trade
 from freqtrade.rpc import telegram
 from freqtrade.rpc.telegram import authorized_only, is_enabled, send_msg, _status, _status_table, \
-    _profit, _forcesell, _performance, _daily, _count, _start, _stop, _balance, _version, _help, \
-    _exec_forcesell
+    _profit, _sell, _performance, _daily, _count, _start, _stop, _balance, _version, _help, \
+    _exec_sell
 
 
 def test_is_enabled(default_conf, mocker):
@@ -207,7 +207,7 @@ def test_profit_handle(
     assert '*Best Performing:* `BTC_ETH: 6.20%`' in msg_mock.call_args_list[-1][0][0]
 
 
-def test_forcesell_handle(default_conf, update, ticker, ticker_sell_up, mocker):
+def test_sell_handle(default_conf, update, ticker, ticker_sell_up, mocker):
     mocker.patch.dict('freqtrade.main._CONF', default_conf)
     mocker.patch('freqtrade.main.get_signal', side_effect=lambda s, t: True)
     rpc_mock = mocker.patch('freqtrade.main.rpc.send_msg', MagicMock())
@@ -234,8 +234,8 @@ def test_forcesell_handle(default_conf, update, ticker, ticker_sell_up, mocker):
                           validate_pairs=MagicMock(),
                           get_ticker=ticker_sell_up)
 
-    update.message.text = '/forcesell 1'
-    _forcesell(bot=MagicMock(), update=update)
+    update.message.text = '/sell 1'
+    _sell(bot=MagicMock(), update=update)
 
     assert rpc_mock.call_count == 2
     assert 'Selling [BTC/ETH]' in rpc_mock.call_args_list[-1][0][0]
@@ -244,7 +244,7 @@ def test_forcesell_handle(default_conf, update, ticker, ticker_sell_up, mocker):
     assert '0.919 USD' in rpc_mock.call_args_list[-1][0][0]
 
 
-def test_forcesell_down_handle(default_conf, update, ticker, ticker_sell_down, mocker):
+def test_sell_down_handle(default_conf, update, ticker, ticker_sell_down, mocker):
     mocker.patch.dict('freqtrade.main._CONF', default_conf)
     mocker.patch('freqtrade.main.get_signal', side_effect=lambda s, t: True)
     rpc_mock = mocker.patch('freqtrade.main.rpc.send_msg', MagicMock())
@@ -271,8 +271,8 @@ def test_forcesell_down_handle(default_conf, update, ticker, ticker_sell_down, m
     trade = Trade.query.first()
     assert trade
 
-    update.message.text = '/forcesell 1'
-    _forcesell(bot=MagicMock(), update=update)
+    update.message.text = '/sell 1'
+    _sell(bot=MagicMock(), update=update)
 
     assert rpc_mock.call_count == 2
     assert 'Selling [BTC/ETH]' in rpc_mock.call_args_list[-1][0][0]
@@ -281,7 +281,7 @@ def test_forcesell_down_handle(default_conf, update, ticker, ticker_sell_down, m
     assert '-0.824 USD' in rpc_mock.call_args_list[-1][0][0]
 
 
-def test_exec_forcesell_open_orders(default_conf, ticker, mocker):
+def test_exec_sell_open_orders(default_conf, ticker, mocker):
     mocker.patch.dict('freqtrade.main._CONF', default_conf)
     cancel_order_mock = MagicMock()
     mocker.patch.multiple('freqtrade.main.exchange',
@@ -299,13 +299,13 @@ def test_exec_forcesell_open_orders(default_conf, ticker, mocker):
         amount=1,
         fee=0.0,
     )
-    _exec_forcesell(trade)
+    _exec_sell(trade)
 
     assert cancel_order_mock.call_count == 1
     assert trade.is_open is False
 
 
-def test_forcesell_all_handle(default_conf, update, ticker, mocker):
+def test_sell_all_handle(default_conf, update, ticker, mocker):
     mocker.patch.dict('freqtrade.main._CONF', default_conf)
     mocker.patch('freqtrade.main.get_signal', side_effect=lambda s, t: True)
     rpc_mock = mocker.patch('freqtrade.main.rpc.send_msg', MagicMock())
@@ -326,8 +326,8 @@ def test_forcesell_all_handle(default_conf, update, ticker, mocker):
         create_trade(0.001)
     rpc_mock.reset_mock()
 
-    update.message.text = '/forcesell all'
-    _forcesell(bot=MagicMock(), update=update)
+    update.message.text = '/sell all'
+    _sell(bot=MagicMock(), update=update)
 
     assert rpc_mock.call_count == 4
     for args in rpc_mock.call_args_list:
@@ -336,7 +336,7 @@ def test_forcesell_all_handle(default_conf, update, ticker, mocker):
         assert '-0.089 USD' in args[0][0]
 
 
-def test_forcesell_handle_invalid(default_conf, update, mocker):
+def test_sell_handle_invalid(default_conf, update, mocker):
     mocker.patch.dict('freqtrade.main._CONF', default_conf)
     mocker.patch('freqtrade.main.get_signal', side_effect=lambda s, t: True)
     msg_mock = MagicMock()
@@ -350,24 +350,24 @@ def test_forcesell_handle_invalid(default_conf, update, mocker):
 
     # Trader is not running
     update_state(State.STOPPED)
-    update.message.text = '/forcesell 1'
-    _forcesell(bot=MagicMock(), update=update)
+    update.message.text = '/sell 1'
+    _sell(bot=MagicMock(), update=update)
     assert msg_mock.call_count == 1
     assert 'not running' in msg_mock.call_args_list[0][0][0]
 
     # No argument
     msg_mock.reset_mock()
     update_state(State.RUNNING)
-    update.message.text = '/forcesell'
-    _forcesell(bot=MagicMock(), update=update)
+    update.message.text = '/sell'
+    _sell(bot=MagicMock(), update=update)
     assert msg_mock.call_count == 1
     assert 'Invalid argument' in msg_mock.call_args_list[0][0][0]
 
     # Invalid argument
     msg_mock.reset_mock()
     update_state(State.RUNNING)
-    update.message.text = '/forcesell 123456'
-    _forcesell(bot=MagicMock(), update=update)
+    update.message.text = '/sell 123456'
+    _sell(bot=MagicMock(), update=update)
     assert msg_mock.call_count == 1
     assert 'Invalid argument.' in msg_mock.call_args_list[0][0][0]
 
