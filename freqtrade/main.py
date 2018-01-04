@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-import asyncio
 import copy
 import json
 import logging
 import sys
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, Optional, List
 
@@ -31,23 +29,30 @@ _BLACKLIST = set()
 def refresh_whitelist(whitelist: List[str]) -> List[str]:
     """
     Check wallet health and remove pair from whitelist if necessary
-    :param whitelist: the pair the user might want to trade
+    :param whitelist: the sorted list (based on BaseVolume) of pairs the user might want to trade
     :return: the list of pairs the user wants to trade without the one unavailable or black_listed
     """
-    sanitized_whitelist = []
+    sanitized_whitelist = whitelist
     health = exchange.get_wallet_health()
+    known_pairs = set()
     for status in health:
         pair = '{}_{}'.format(_CONF['stake_currency'], status['Currency'])
+        # pair is not int the generated dynamic market, or in the blacklist ... ignore it
         if pair not in whitelist or pair in _CONF['exchange'].get('pair_blacklist', []):
             continue
-        if status['IsActive']:
-            sanitized_whitelist.append(pair)
-        else:
+        # else the pair is valid
+        known_pairs.add(pair)
+        # Market is not active
+        if not status['IsActive']:
+            sanitized_whitelist.remove(pair)
             logger.debug(
                 'Ignoring %s from whitelist (reason: %s).',
                 pair, status.get('Notice') or 'wallet is not active'
             )
-    return sanitized_whitelist
+
+    # We need to remove pairs that are unknown
+    final_list = [x for x in sanitized_whitelist if x in known_pairs]
+    return final_list
 
 
 def _process(nb_assets: Optional[int] = 0) -> bool:
@@ -145,8 +150,9 @@ def execute_sell(trade: Trade, limit: float) -> None:
             _CONF['stake_currency'],
             _CONF['fiat_display_currency']
         )
-        message += '` (profit: ~{profit_percent:.2f}%, {profit_coin:.8f} {coin}`' \
+        message += '` ({gain}: {profit_percent:.2f}%, {profit_coin:.8f} {coin}`' \
                    '` / {profit_fiat:.3f} {fiat})`'.format(
+                        gain="profit" if fmt_exp_profit > 0 else "loss",
                         profit_percent=fmt_exp_profit,
                         profit_coin=profit_trade,
                         coin=_CONF['stake_currency'],
@@ -156,7 +162,8 @@ def execute_sell(trade: Trade, limit: float) -> None:
     # Because telegram._forcesell does not have the configuration
     # Ignore the FIAT value and does not show the stake_currency as well
     else:
-        message += '` (profit: ~{profit_percent:.2f}%, {profit_coin:.8f})`'.format(
+        message += '` ({gain}: {profit_percent:.2f}%, {profit_coin:.8f})`'.format(
+            gain="profit" if fmt_exp_profit > 0 else "loss",
             profit_percent=fmt_exp_profit,
             profit_coin=profit_trade
         )
@@ -197,13 +204,19 @@ def handle_trade(trade: Trade) -> bool:
     logger.debug('Handling %s ...', trade)
     current_rate = exchange.get_ticker(trade.pair)['bid']
 
+    # Experimental: Check if the trade is profitable before selling it (avoid selling at loss)
+    if _CONF.get('experimental', {}).get('sell_profit_only'):
+        logger.debug('Checking if trade is profitable ...')
+        if trade.calc_profit(rate=current_rate) <= 0:
+            return False
+
     # Check if minimal roi has been reached
     if min_roi_reached(trade, current_rate, datetime.utcnow()):
         logger.debug('Executing sell due to ROI ...')
         execute_sell(trade, current_rate)
         return True
 
-    # Check if sell signal has been enabled and triggered
+    # Experimental: Check if sell signal has been enabled and triggered
     if _CONF.get('experimental', {}).get('use_sell_signal'):
         logger.debug('Checking sell_signal ...')
         if get_signal(trade.pair, SignalType.SELL):
@@ -254,17 +267,9 @@ def create_trade(stake_amount: float) -> bool:
     if not whitelist:
         raise DependencyException('No pair in whitelist')
 
-    with ThreadPoolExecutor() as pool:
-        awaitable_signals = [
-            asyncio.wrap_future(pool.submit(get_signal, pair, SignalType.BUY))
-            for pair in whitelist
-        ]
-
-    loop = asyncio.get_event_loop()
-    signals = loop.run_until_complete(asyncio.gather(*awaitable_signals))
-
-    for idx, _pair in enumerate(whitelist):
-        if signals[idx]:
+    # Pick pair based on StochRSI buy signals
+    for _pair in whitelist:
+        if get_signal(_pair, SignalType.BUY):
             pair = _pair
             break
     else:
@@ -282,12 +287,20 @@ def create_trade(stake_amount: float) -> bool:
         logger.warning('Add pair %s to blacklist', pair)
         return False
 
+    fiat_converter = CryptoToFiatConverter()
+    stake_amount_fiat = fiat_converter.convert_amount(
+        stake_amount,
+        _CONF['stake_currency'],
+        _CONF['fiat_display_currency']
+    )
+
     # Create trade entity and return
-    rpc.send_msg('*{}:* Buying [{}]({}) with limit `{:.8f}`'.format(
+    rpc.send_msg('*{}:* Buying [{}]({}) with limit `{:.8f} ({:.6f} {}, {:.3f} {})` '.format(
         exchange.get_name().upper(),
         pair.replace('_', '/'),
         exchange.get_pair_detail_url(pair),
-        buy_limit
+        buy_limit, stake_amount, _CONF['stake_currency'],
+        stake_amount_fiat, _CONF['fiat_display_currency']
     ))
     # Fee is applied twice because we make a LIMIT_BUY and LIMIT_SELL
     trade = Trade(

@@ -71,7 +71,7 @@ def populate_indicators(dataframe: DataFrame) -> DataFrame:
     return dataframe
 
 
-def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
+def populate_buy_trend_my(dataframe: DataFrame) -> DataFrame:
     """
     Based on TA indicators, populates the buy signal for the given dataframe
     :param dataframe: DataFrame
@@ -87,7 +87,7 @@ def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
     return dataframe
 
 
-def populate_buy_trend_orig(dataframe: DataFrame) -> DataFrame:
+def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
     dataframe.loc[
         (
             (dataframe['rsi'] < 35) &
@@ -155,9 +155,6 @@ def get_signal(pair: str, signal: SignalType) -> bool:
         dataframe = analyze_ticker(ticker_hist)
     except ValueError as ex:
         logger.warning('Unable to analyze ticker for pair %s: %s', pair, str(ex))
-        return False
-    except Exception:
-        logger.exception('Unexpected error when analyzing ticker for pair %s.', pair)
         return False
 
     if dataframe.empty:

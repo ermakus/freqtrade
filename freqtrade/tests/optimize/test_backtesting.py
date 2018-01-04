@@ -5,6 +5,7 @@ import pandas as pd
 # from unittest.mock import MagicMock
 from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex
+from freqtrade.optimize import preprocess
 from freqtrade.optimize.backtesting import backtest, generate_text_table, get_timeframe
 # import freqtrade.optimize.backtesting as backtesting
 
@@ -18,15 +19,16 @@ def test_generate_text_table():
             'duration': [10, 30]
         }
     )
+    print(generate_text_table({'BTC_ETH': {}}, results, 'BTC', 5))
     assert generate_text_table({'BTC_ETH': {}}, results, 'BTC', 5) == (
-        'pair       buy count  avg profit    total profit      avg duration\n'
-        '-------  -----------  ------------  --------------  --------------\n'
-        'BTC_ETH            2  15.00%        0.60000000 BTC             100\n'
-        'TOTAL              2  15.00%        0.60000000 BTC             100')
+        'pair       buy count    avg profit %    total profit BTC    avg duration\n'
+        '-------  -----------  --------------  ------------------  --------------\n'
+        'BTC_ETH            2           15.00          0.60000000           100.0\n'
+        'TOTAL              2           15.00          0.60000000           100.0')
 
 
 def test_get_timeframe():
-    data = optimize.load_data(ticker_interval=1, pairs=['BTC_UNITEST'])
+    data = preprocess(optimize.load_data(ticker_interval=1, pairs=['BTC_UNITEST']))
     min_date, max_date = get_timeframe(data)
     assert min_date.isoformat() == '2017-11-04T23:02:00+00:00'
     assert max_date.isoformat() == '2017-11-14T22:59:00+00:00'
