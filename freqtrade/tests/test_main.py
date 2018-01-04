@@ -16,7 +16,8 @@ from freqtrade.main import create_trade, handle_trade, init, \
 from freqtrade.misc import get_state, State
 from freqtrade.persistence import Trade
 
-TEST_STRATEGY='base'
+TEST_STRATEGY = 'base'
+
 
 def test_process_trade_creation(default_conf, ticker, health, mocker):
     mocker.patch.dict('freqtrade.main._CONF', default_conf)

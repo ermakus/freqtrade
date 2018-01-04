@@ -17,7 +17,7 @@ from freqtrade.rpc.telegram import authorized_only, is_enabled, send_msg, _statu
     _profit, _sell, _performance, _daily, _count, _start, _stop, _balance, _version, _help, \
     _exec_sell
 
-TEST_STRATEGY='base'
+TEST_STRATEGY = 'base'
 
 
 def test_is_enabled(default_conf, mocker):

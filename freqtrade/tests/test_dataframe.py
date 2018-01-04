@@ -5,7 +5,8 @@ import freqtrade.optimize
 
 _pairs = ['BTC_ETH']
 
-TEST_STRATEGY='base'
+TEST_STRATEGY = 'base'
+
 
 def load_dataframe_pair(pairs):
     ld = freqtrade.optimize.load_data(ticker_interval=5, pairs=pairs)

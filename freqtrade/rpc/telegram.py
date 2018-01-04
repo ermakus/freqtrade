@@ -581,7 +581,7 @@ def _exec_sell(trade: Trade) -> None:
     # Get current rate and execute sell
     current_rate = exchange.get_ticker(trade.pair)['bid']
     from freqtrade.main import execute_sell, _CONF as _C
-    _C.update(_CONF) # ???! KeyError: 'fiat_display_currency' workaround, threading issue?
+    _C.update(_CONF)  # Ugly fix for #248
     execute_sell(trade, current_rate)
 
 

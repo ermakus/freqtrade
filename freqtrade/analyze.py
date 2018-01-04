@@ -79,6 +79,7 @@ def populate_buy_trend(dataframe: DataFrame, strategy: str = 'default') -> DataF
     """
     return globals()["populate_buy_trend_%s" % strategy](dataframe)
 
+
 def populate_sell_trend(dataframe: DataFrame, strategy: str = 'default') -> DataFrame:
     """
     Based on TA indicators, populates the sell signal for the given dataframe
@@ -86,6 +87,7 @@ def populate_sell_trend(dataframe: DataFrame, strategy: str = 'default') -> Data
     :return: DataFrame with buy column
     """
     return globals()["populate_sell_trend_%s" % strategy](dataframe)
+
 
 # Default strategy
 # TODO: move to strategy class
@@ -99,9 +101,11 @@ def populate_buy_trend_default(dataframe: DataFrame, strategy: str = None) -> Da
         'buy'] = 1
     return dataframe
 
+
 def populate_sell_trend_default(dataframe: DataFrame, strategy: str = None) -> DataFrame:
     dataframe['sell'] = 0
     return dataframe
+
 
 # Base (original) strategy, used in unit tests
 def populate_buy_trend_base(dataframe: DataFrame, strategy: str = None) -> DataFrame:
@@ -119,6 +123,7 @@ def populate_buy_trend_base(dataframe: DataFrame, strategy: str = None) -> DataF
         'buy'] = 1
 
     return dataframe
+
 
 def populate_sell_trend_base(dataframe: DataFrame) -> DataFrame:
     dataframe.loc[

@@ -9,7 +9,8 @@ from pandas import DataFrame
 from freqtrade.analyze import parse_ticker_dataframe, populate_buy_trend, populate_indicators, \
     get_signal, SignalType, populate_sell_trend
 
-TEST_STRATEGY='base'
+TEST_STRATEGY = 'base'
+
 
 @pytest.fixture
 def result():

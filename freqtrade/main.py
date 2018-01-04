@@ -5,7 +5,7 @@ import logging
 import sys
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Optional, List
 
 import requests
@@ -67,7 +67,7 @@ def _process(nb_assets: Optional[int] = 0, strategy: Optional[str] = 'default') 
         # Refresh whitelist based on wallet maintenance
         sanitized_list = refresh_whitelist(
             gen_pair_whitelist(
-                _CONF['stake_currency'], nb_assets = nb_assets
+                _CONF['stake_currency'], nb_assets=nb_assets
             ) if nb_assets else _CONF['exchange']['pair_whitelist']
         )
 
@@ -100,10 +100,6 @@ def _process(nb_assets: Optional[int] = 0, strategy: Optional[str] = 'default') 
                 # Check if we can sell our current pair
                 state_changed = handle_trade(trade, strategy) or state_changed
 
-            if 'unfilledtimeout' in _CONF and trade.open_order_id:
-                # Check and handle any timed out trades
-                check_handle_timedout(trade)
-
             Trade.session.flush()
 
     except (requests.exceptions.RequestException, json.JSONDecodeError) as error:
@@ -123,54 +119,6 @@ def _process(nb_assets: Optional[int] = 0, strategy: Optional[str] = 'default') 
         update_state(State.STOPPED)
 
     return state_changed
-
-
-def check_handle_timedout(trade: Trade) -> bool:
-    """
-    Check if a trade is timed out and cancel if neccessary
-    :param trade: Trade instance
-    :return: True if the trade is timed out, false otherwise
-    """
-    timeoutthreashold = datetime.utcnow() - timedelta(minutes=_CONF['unfilledtimeout'])
-    order = exchange.get_order(trade.open_order_id)
-
-    if trade.open_date < timeoutthreashold:
-        # Buy timeout - cancel order
-        try:
-            exchange.cancel_order(trade.open_order_id)
-        except TradeException as ex:
-            logger.warning("Can't cancel order: {}".format(ex))
-            return False
-        if order['remaining'] == order['amount']:
-            # if trade is not partially completed, just delete the trade
-            Trade.session.delete(trade)
-            Trade.session.flush()
-            logger.info('Buy order timeout for %s.', trade)
-        else:
-            # if trade is partially complete, edit the stake details for the trade
-            # and close the order
-            trade.amount = order['amount'] - order['remaining']
-            trade.stake_amount = trade.amount * trade.open_rate
-            trade.open_order_id = None
-            logger.info('Partial buy order timeout for %s.', trade)
-        return True
-    elif trade.close_date is not None and trade.close_date < timeoutthreashold:
-        # Sell timeout - cancel order and update trade
-        if order['remaining'] == order['amount']:
-            # if trade is not partially completed, just cancel the trade
-            exchange.cancel_order(trade.open_order_id)
-            trade.close_rate = None
-            trade.close_profit = None
-            trade.close_date = None
-            trade.is_open = True
-            trade.open_order_id = None
-            logger.info('Sell order timeout for %s.', trade)
-            return True
-        else:
-            # TODO: figure out how to handle partially complete sell orders
-            return False
-    else:
-        return False
 
 
 def execute_sell(trade: Trade, limit: float) -> None:
@@ -391,7 +339,8 @@ def init(config: dict, db_url: Optional[str] = None) -> None:
 
 
 @cached(TTLCache(maxsize=1, ttl=1800))
-def gen_pair_whitelist(base_currency: str, key: str = 'BaseVolume', nb_assets: int = 0) -> List[str]:
+def gen_pair_whitelist(base_currency: str, key: str = 'BaseVolume',
+                       nb_assets: int = 0) -> List[str]:
     """
     Updates the whitelist with with a dynamically generated list
     :param base_currency: base currency as str
