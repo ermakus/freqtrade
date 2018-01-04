@@ -9,6 +9,7 @@ from pandas import DataFrame
 from freqtrade.analyze import parse_ticker_dataframe, populate_buy_trend, populate_indicators, \
     get_signal, SignalType, populate_sell_trend
 
+TEST_STRATEGY='base'
 
 @pytest.fixture
 def result():
@@ -26,12 +27,12 @@ def test_dataframe_correct_length(result):
 
 
 def test_populates_buy_trend(result):
-    dataframe = populate_buy_trend(populate_indicators(result))
+    dataframe = populate_buy_trend(populate_indicators(result), TEST_STRATEGY)
     assert 'buy' in dataframe.columns
 
 
 def test_populates_sell_trend(result):
-    dataframe = populate_sell_trend(populate_indicators(result))
+    dataframe = populate_sell_trend(populate_indicators(result), TEST_STRATEGY)
     assert 'sell' in dataframe.columns
 
 
@@ -41,13 +42,13 @@ def test_returns_latest_buy_signal(mocker):
         'freqtrade.analyze.analyze_ticker',
         return_value=DataFrame([{'buy': 1, 'date': arrow.utcnow()}])
     )
-    assert get_signal('BTC-ETH', SignalType.BUY)
+    assert get_signal('BTC-ETH', SignalType.BUY, TEST_STRATEGY)
 
     mocker.patch(
         'freqtrade.analyze.analyze_ticker',
         return_value=DataFrame([{'buy': 0, 'date': arrow.utcnow()}])
     )
-    assert not get_signal('BTC-ETH', SignalType.BUY)
+    assert not get_signal('BTC-ETH', SignalType.BUY, TEST_STRATEGY)
 
 
 def test_returns_latest_sell_signal(mocker):
@@ -56,10 +57,10 @@ def test_returns_latest_sell_signal(mocker):
         'freqtrade.analyze.analyze_ticker',
         return_value=DataFrame([{'sell': 1, 'date': arrow.utcnow()}])
     )
-    assert get_signal('BTC-ETH', SignalType.SELL)
+    assert get_signal('BTC-ETH', SignalType.SELL, TEST_STRATEGY)
 
     mocker.patch(
         'freqtrade.analyze.analyze_ticker',
         return_value=DataFrame([{'sell': 0, 'date': arrow.utcnow()}])
     )
-    assert not get_signal('BTC-ETH', SignalType.SELL)
+    assert not get_signal('BTC-ETH', SignalType.SELL, TEST_STRATEGY)

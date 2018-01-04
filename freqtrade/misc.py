@@ -132,6 +132,14 @@ def parse_args(args: List[str]):
         action='store_true',
         dest='watchdog_enable',
     )
+    parser.add_argument(
+        '-s', '--strategy',
+        help='specify strategy name (default: "default")',
+        dest='strategy',
+        default='default',
+        type=str,
+        metavar='STRING',
+    )
     build_subcommands(parser)
     parsed_args = parser.parse_args(args)
 

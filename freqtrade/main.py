@@ -55,7 +55,7 @@ def refresh_whitelist(whitelist: List[str]) -> List[str]:
     return final_list
 
 
-def _process(nb_assets: Optional[int] = 0) -> bool:
+def _process(nb_assets: Optional[int] = 0, strategy: Optional[str] = 'default') -> bool:
     """
     Queries the persistence layer for open trades and handles them,
     otherwise a new trade is created.
@@ -80,7 +80,7 @@ def _process(nb_assets: Optional[int] = 0) -> bool:
         if len(trades) < _CONF['max_open_trades']:
             try:
                 # Create entity and execute trade
-                state_changed = create_trade(float(_CONF['stake_amount']))
+                state_changed = create_trade(float(_CONF['stake_amount']), strategy)
                 if not state_changed:
                     logger.debug(
                         'Checked all whitelisted currencies. '
@@ -98,7 +98,7 @@ def _process(nb_assets: Optional[int] = 0) -> bool:
 
             if trade.is_open and trade.open_order_id is None:
                 # Check if we can sell our current pair
-                state_changed = handle_trade(trade) or state_changed
+                state_changed = handle_trade(trade, strategy) or state_changed
 
             if 'unfilledtimeout' in _CONF and trade.open_order_id:
                 # Check and handle any timed out trades
@@ -241,7 +241,7 @@ def min_roi_reached(trade: Trade, current_rate: float, current_time: datetime) -
     return False
 
 
-def handle_trade(trade: Trade) -> bool:
+def handle_trade(trade: Trade, strategy: str) -> bool:
     """
     Sells the current pair if the threshold is reached and updates the trade record.
     :return: True if trade has been sold, False otherwise
@@ -267,7 +267,7 @@ def handle_trade(trade: Trade) -> bool:
     # Experimental: Check if sell signal has been enabled and triggered
     if _CONF.get('experimental', {}).get('use_sell_signal'):
         logger.debug('Checking sell_signal ...')
-        if get_signal(trade.pair, SignalType.SELL):
+        if get_signal(trade.pair, SignalType.SELL, strategy):
             logger.debug('Executing sell due to sell signal ...')
             execute_sell(trade, current_rate)
             return True
@@ -283,7 +283,7 @@ def get_target_bid(ticker: Dict[str, float]) -> float:
     return ticker['ask'] + balance * (ticker['last'] - ticker['ask'])
 
 
-def create_trade(stake_amount: float) -> bool:
+def create_trade(stake_amount: float, strategy: str) -> bool:
     """
     Checks the implemented trading indicator(s) for a randomly picked pair,
     if one pair triggers the buy_signal a new trade record gets created
@@ -317,7 +317,7 @@ def create_trade(stake_amount: float) -> bool:
 
     # Pick pair based on StochRSI buy signals
     for _pair in whitelist:
-        if get_signal(_pair, SignalType.BUY):
+        if get_signal(_pair, SignalType.BUY, strategy):
             pair = _pair
             break
     else:
@@ -466,6 +466,8 @@ def main() -> None:
         if not watchdog.start():
             return
 
+    logger.info("Use strategy: %s".format(args.strategy))
+
     try:
         init(_CONF)
         old_state = None
@@ -483,6 +485,7 @@ def main() -> None:
                     _process,
                     min_secs=_CONF['internals'].get('process_throttle_secs', 10),
                     nb_assets=args.dynamic_whitelist,
+                    strategy=args.strategy
                 )
             old_state = new_state
             watchdog.heartbeat()

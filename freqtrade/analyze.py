@@ -138,7 +138,7 @@ def populate_sell_trend_base(dataframe: DataFrame) -> DataFrame:
     return dataframe
 
 
-def analyze_ticker(ticker_history: List[Dict]) -> DataFrame:
+def analyze_ticker(ticker_history: List[Dict], strategy: str) -> DataFrame:
     """
     Parses the given ticker history and returns a populated DataFrame
     add several TA indicators and buy signal to it
@@ -146,12 +146,12 @@ def analyze_ticker(ticker_history: List[Dict]) -> DataFrame:
     """
     dataframe = parse_ticker_dataframe(ticker_history)
     dataframe = populate_indicators(dataframe)
-    dataframe = populate_buy_trend(dataframe)
-    dataframe = populate_sell_trend(dataframe)
+    dataframe = populate_buy_trend(dataframe, strategy)
+    dataframe = populate_sell_trend(dataframe, strategy)
     return dataframe
 
 
-def get_signal(pair: str, signal: SignalType) -> bool:
+def get_signal(pair: str, signal: SignalType, strategy: str) -> bool:
     """
     Calculates current signal based several technical analysis indicators
     :param pair: pair in format BTC_ANT or BTC-ANT
@@ -163,7 +163,7 @@ def get_signal(pair: str, signal: SignalType) -> bool:
         return False
 
     try:
-        dataframe = analyze_ticker(ticker_hist)
+        dataframe = analyze_ticker(ticker_hist, strategy)
     except ValueError as ex:
         logger.warning('Unable to analyze ticker for pair %s: %s', pair, str(ex))
         return False
