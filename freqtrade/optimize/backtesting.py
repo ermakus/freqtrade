@@ -172,7 +172,7 @@ def start(args):
 
     # Execute backtest and print results
     results = backtest(
-        config['stake_amount'], preprocessed, max_open_trades, args.realistic_simulation
+        config['stake_amount'], preprocessed, max_open_trades, args.realistic_simulation, args.strategy
     )
     logger.info(
         '\n====================== BACKTESTING REPORT ================================\n%s',
