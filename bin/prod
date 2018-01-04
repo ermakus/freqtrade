@@ -1,1 +1,1 @@
-nohup ./bin/trade -w $* &
+nohup ./bin/trade -w --dynamic-whitelist 18 $* &

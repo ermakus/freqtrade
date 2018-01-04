@@ -107,10 +107,9 @@ def simple_backtest(config, contour, num_results):
     data = load_data_test(contour)
     processed = optimize.preprocess(data)
     assert isinstance(processed, dict)
-    results = backtest(config['stake_amount'], processed, 1, True)
+    results = backtest(config['stake_amount'], processed, 1, True, strategy='base')
     # results :: <class 'pandas.core.frame.DataFrame'>
     assert len(results) == num_results
-
 
 # Test backtest on offline data
 # loaded by freqdata/optimize/__init__.py::load_data()

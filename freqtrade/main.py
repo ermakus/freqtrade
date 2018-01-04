@@ -67,7 +67,7 @@ def _process(nb_assets: Optional[int] = 0) -> bool:
         # Refresh whitelist based on wallet maintenance
         sanitized_list = refresh_whitelist(
             gen_pair_whitelist(
-                _CONF['stake_currency']
+                _CONF['stake_currency'], nb_assets = nb_assets
             ) if nb_assets else _CONF['exchange']['pair_whitelist']
         )
 
@@ -387,7 +387,7 @@ def init(config: dict, db_url: Optional[str] = None) -> None:
 
 
 @cached(TTLCache(maxsize=1, ttl=1800))
-def gen_pair_whitelist(base_currency: str, key: str = 'BaseVolume') -> List[str]:
+def gen_pair_whitelist(base_currency: str, key: str = 'BaseVolume', nb_assets: int = 0) -> List[str]:
     """
     Updates the whitelist with with a dynamically generated list
     :param base_currency: base currency as str
@@ -401,6 +401,8 @@ def gen_pair_whitelist(base_currency: str, key: str = 'BaseVolume') -> List[str]
     )
 
     pairs = [s['MarketName'].replace('-', '_') for s in summaries]
+    if nb_assets:
+        pairs = pairs[:nb_assets]
     logger.info("Trading pairs: {}".format(pairs))
     return pairs
 

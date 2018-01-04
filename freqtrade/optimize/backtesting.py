@@ -64,7 +64,7 @@ def generate_text_table(
 
 
 def backtest(stake_amount: float, processed: Dict[str, DataFrame],
-             max_open_trades: int = 0, realistic: bool = True) -> DataFrame:
+             max_open_trades: int = 0, realistic: bool = True, strategy: str = 'default') -> DataFrame:
     """
     Implements backtesting functionality
     :param stake_amount: btc amount to use for each trade
@@ -78,7 +78,7 @@ def backtest(stake_amount: float, processed: Dict[str, DataFrame],
     exchange._API = Bittrex({'key': '', 'secret': ''})
     for pair, pair_data in processed.items():
         pair_data['buy'], pair_data['sell'] = 0, 0
-        ticker = populate_sell_trend(populate_buy_trend(pair_data))
+        ticker = populate_sell_trend(populate_buy_trend(pair_data, strategy=strategy), strategy=strategy)
         # for each buy point
         lock_pair_until = None
         buy_subset = ticker[ticker.buy == 1][['buy', 'open', 'close', 'date', 'sell']]
