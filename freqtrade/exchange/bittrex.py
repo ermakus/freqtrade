@@ -50,10 +50,15 @@ class Bittrex(Exchange):
             'APIKEY_INVALID',
         ]
 
+        trade_error_messages = [
+            'MIN_TRADE_REQUIREMENT_NOT_MET',
+            'ORDER_NOT_OPEN'
+        ]
+
         if response['message'] in temp_error_messages:
             raise ContentDecodingError('Temporary error: {}'.format(response['message']))
 
-        if response['message'] == 'MIN_TRADE_REQUIREMENT_NOT_MET':
+        if response['message'] in trade_error_messages:
             raise TradeException('Market error: {}'.format(response['message']))
 
     @property

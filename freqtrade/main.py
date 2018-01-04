@@ -136,7 +136,11 @@ def check_handle_timedout(trade: Trade) -> bool:
 
     if trade.open_date < timeoutthreashold:
         # Buy timeout - cancel order
-        exchange.cancel_order(trade.open_order_id)
+        try:
+            exchange.cancel_order(trade.open_order_id)
+        except TradeException as ex:
+            logger.warning("Can't cancel order: {}".format(ex))
+            return False
         if order['remaining'] == order['amount']:
             # if trade is not partially completed, just delete the trade
             Trade.session.delete(trade)
@@ -466,7 +470,7 @@ def main() -> None:
         if not watchdog.start():
             return
 
-    logger.info("Use strategy: %s".format(args.strategy))
+    logger.info("Use strategy: {}".format(args.strategy))
 
     try:
         init(_CONF)
