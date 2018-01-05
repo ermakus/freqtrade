@@ -5,21 +5,21 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 import logging
-from datetime import timedelta, datetime
+import arrow
 from sqlalchemy import create_engine
 
 from freqtrade import DependencyException, OperationalException
 from freqtrade.analyze import SignalType
 from freqtrade.exchange import Exchanges
 from freqtrade.main import create_trade, handle_trade, init, \
-    get_target_bid, _process, execute_sell
+    get_target_bid, _process, execute_sell, check_handle_timedout 
 from freqtrade.misc import get_state, State
 from freqtrade.persistence import Trade
 
 TEST_STRATEGY = 'base'
 
 
-def test_process_trade_creation(default_conf, ticker, health, mocker):
+def test_process_trade_creation(default_conf, ticker, limit_buy_order, health, mocker):
     mocker.patch.dict('freqtrade.main._CONF', default_conf)
     mocker.patch.multiple('freqtrade.rpc', init=MagicMock(), send_msg=MagicMock())
     mocker.patch('freqtrade.main.get_signal', side_effect=lambda s, t, sg: True)
@@ -27,7 +27,8 @@ def test_process_trade_creation(default_conf, ticker, health, mocker):
                           validate_pairs=MagicMock(),
                           get_ticker=ticker,
                           get_wallet_health=health,
-                          buy=MagicMock(return_value='mocked_limit_buy'))
+                          buy=MagicMock(return_value='mocked_limit_buy'),
+                          get_order=MagicMock(return_value=limit_buy_order))
     init(default_conf, create_engine('sqlite://'))
 
     trades = Trade.query.filter(Trade.is_open.is_(True)).all()
@@ -319,6 +320,106 @@ def test_close_trade(default_conf, ticker, limit_buy_order, limit_sell_order, mo
 
     with pytest.raises(ValueError, match=r'.*closed trade.*'):
         handle_trade(trade, TEST_STRATEGY)
+
+
+def test_check_handle_timedout_buy(default_conf, ticker, health, limit_buy_order_old, mocker):
+    mocker.patch.dict('freqtrade.main._CONF', default_conf)
+    cancel_order_mock = MagicMock()
+    mocker.patch.multiple('freqtrade.rpc', init=MagicMock(), send_msg=MagicMock())
+    mocker.patch.multiple('freqtrade.main.exchange',
+                          validate_pairs=MagicMock(),
+                          get_ticker=ticker,
+                          get_order=MagicMock(return_value=limit_buy_order_old),
+                          cancel_order=cancel_order_mock)
+    init(default_conf, create_engine('sqlite://'))
+
+    tradeBuy = Trade(
+        pair='BTC_ETH',
+        open_rate=0.00001099,
+        exchange='BITTREX',
+        open_order_id='123456789',
+        amount=90.99181073,
+        fee=0.0,
+        stake_amount=1,
+        open_date=arrow.utcnow().shift(minutes=-601).datetime,
+        is_open=True
+    )
+
+    Trade.session.add(tradeBuy)
+
+    # check it does cancel buy orders over the time limit
+    check_handle_timedout(600)
+    assert cancel_order_mock.call_count == 1
+    trades = Trade.query.filter(Trade.open_order_id.is_(tradeBuy.open_order_id)).all()
+    assert len(trades) == 0
+
+
+def test_check_handle_timedout_sell(default_conf, ticker, health, limit_sell_order_old, mocker):
+    mocker.patch.dict('freqtrade.main._CONF', default_conf)
+    cancel_order_mock = MagicMock()
+    mocker.patch.multiple('freqtrade.rpc', init=MagicMock(), send_msg=MagicMock())
+    mocker.patch.multiple('freqtrade.main.exchange',
+                          validate_pairs=MagicMock(),
+                          get_ticker=ticker,
+                          get_order=MagicMock(return_value=limit_sell_order_old),
+                          cancel_order=cancel_order_mock)
+    init(default_conf, create_engine('sqlite://'))
+
+    tradeSell = Trade(
+        pair='BTC_ETH',
+        open_rate=0.00001099,
+        exchange='BITTREX',
+        open_order_id='123456789',
+        amount=90.99181073,
+        fee=0.0,
+        stake_amount=1,
+        open_date=arrow.utcnow().shift(hours=-5).datetime,
+        close_date=arrow.utcnow().shift(minutes=-601).datetime,
+        is_open=False
+    )
+
+    Trade.session.add(tradeSell)
+
+    # check it does cancel sell orders over the time limit
+    check_handle_timedout(600)
+    assert cancel_order_mock.call_count == 1
+    assert tradeSell.is_open is True
+
+
+def test_check_handle_timedout_partial(default_conf, ticker, limit_buy_order_old_partial,
+                                       health, mocker):
+    mocker.patch.dict('freqtrade.main._CONF', default_conf)
+    cancel_order_mock = MagicMock()
+    mocker.patch.multiple('freqtrade.rpc', init=MagicMock(), send_msg=MagicMock())
+    mocker.patch.multiple('freqtrade.main.exchange',
+                          validate_pairs=MagicMock(),
+                          get_ticker=ticker,
+                          get_order=MagicMock(return_value=limit_buy_order_old_partial),
+                          cancel_order=cancel_order_mock)
+    init(default_conf, create_engine('sqlite://'))
+
+    tradeBuy = Trade(
+        pair='BTC_ETH',
+        open_rate=0.00001099,
+        exchange='BITTREX',
+        open_order_id='123456789',
+        amount=90.99181073,
+        fee=0.0,
+        stake_amount=1,
+        open_date=arrow.utcnow().shift(minutes=-601).datetime,
+        is_open=True
+    )
+
+    Trade.session.add(tradeBuy)
+
+    # check it does cancel buy orders over the time limit
+    # note this is for a partially-complete buy order
+    check_handle_timedout(600)
+    assert cancel_order_mock.call_count == 1
+    trades = Trade.query.filter(Trade.open_order_id.is_(tradeBuy.open_order_id)).all()
+    assert len(trades) == 1
+    assert trades[0].amount == 23.0
+    assert trades[0].stake_amount == tradeBuy.open_rate * trades[0].amount
 
 
 def test_balance_fully_ask_side(mocker):

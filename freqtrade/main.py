@@ -5,6 +5,7 @@ import logging
 import sys
 import time
 import traceback
+import arrow
 from datetime import datetime
 from typing import Dict, Optional, List
 
@@ -100,6 +101,10 @@ def _process(nb_assets: Optional[int] = 0, strategy: Optional[str] = 'default') 
                 # Check if we can sell our current pair
                 state_changed = handle_trade(trade, strategy) or state_changed
 
+        if 'unfilledtimeout' in _CONF:
+            # Check and handle any timed out open orders
+            check_handle_timedout(_CONF['unfilledtimeout'])
+
             Trade.session.flush()
 
     except (requests.exceptions.RequestException, json.JSONDecodeError) as error:
@@ -119,6 +124,50 @@ def _process(nb_assets: Optional[int] = 0, strategy: Optional[str] = 'default') 
         update_state(State.STOPPED)
 
     return state_changed
+
+
+def check_handle_timedout(timeoutvalue: int) -> None:
+    """
+    Check if any orders are timed out and cancel if neccessary
+    :param timeoutvalue: Number of minutes until order is considered timed out
+    :return: None
+    """
+    timeoutthreashold = arrow.utcnow().shift(minutes=-timeoutvalue).datetime
+
+    for trade in Trade.query.filter(Trade.open_order_id.isnot(None)).all():
+        order = exchange.get_order(trade.open_order_id)
+        ordertime = arrow.get(order['opened'])
+        logger.info("Compare order time {} and {}".format(ordertime, timeoutthreashold))
+        if order['type'] == "LIMIT_BUY" and ordertime < timeoutthreashold:
+            # Buy timeout - cancel order
+            exchange.cancel_order(trade.open_order_id)
+            if order['remaining'] == order['amount']:
+                # if trade is not partially completed, just delete the trade
+                Trade.session.delete(trade)
+                Trade.session.flush()
+                logger.info('Buy order timeout for %s.', trade)
+            else:
+                # if trade is partially complete, edit the stake details for the trade
+                # and close the order
+                trade.amount = order['amount'] - order['remaining']
+                trade.stake_amount = trade.amount * trade.open_rate
+                trade.open_order_id = None
+                logger.info('Partial buy order timeout for %s.', trade)
+        elif order['type'] == "LIMIT_SELL" and ordertime < timeoutthreashold:
+            # Sell timeout - cancel order and update trade
+            if order['remaining'] == order['amount']:
+                # if trade is not partially completed, just cancel the trade
+                exchange.cancel_order(trade.open_order_id)
+                trade.close_rate = None
+                trade.close_profit = None
+                trade.close_date = None
+                trade.is_open = True
+                trade.open_order_id = None
+                logger.info('Sell order timeout for %s.', trade)
+                return True
+            else:
+                # TODO: figure out how to handle partially complete sell orders
+                pass
 
 
 def execute_sell(trade: Trade, limit: float) -> None:
