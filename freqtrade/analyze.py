@@ -68,6 +68,7 @@ def populate_indicators(dataframe: DataFrame) -> DataFrame:
     dataframe['plus_di'] = ta.PLUS_DI(dataframe)
     dataframe['minus_dm'] = ta.MINUS_DM(dataframe)
     dataframe['minus_di'] = ta.MINUS_DI(dataframe)
+    dataframe['cci'] = ta.CCI(dataframe)
     return dataframe
 
 
@@ -103,6 +104,23 @@ def populate_buy_trend_default(dataframe: DataFrame, strategy: str = None) -> Da
 
 
 def populate_sell_trend_default(dataframe: DataFrame, strategy: str = None) -> DataFrame:
+    dataframe['sell'] = 0
+    return dataframe
+
+
+# New stragegy credit to @baudbox
+def populate_buy_trend_new(dataframe: DataFrame, strategy: str = None) -> DataFrame:
+    dataframe.loc[
+        (dataframe['close'] > 0.00001000) &
+        (dataframe['cci'] < -90.0) &
+        (dataframe['fastd'] < 15) & (dataframe['fastk'] < 15) &
+        (dataframe['fastk'] < dataframe['fastd']) &
+        (dataframe['adx'] > 15),
+        'buy'] = 1
+    return dataframe
+
+
+def populate_sell_trend_new(dataframe: DataFrame, strategy: str = None) -> DataFrame:
     dataframe['sell'] = 0
     return dataframe
 
