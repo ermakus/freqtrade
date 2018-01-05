@@ -192,7 +192,7 @@ def start(args):
         sell_profit_only=config.get('experimental', {}).get('sell_profit_only', False),
         stoploss=config.get('stoploss'),
         use_sell_signal=config.get('experimental', {}).get('use_sell_signal', False),
-        args.strategy
+        strategy=args.strategy
     )
     logger.info(
         '\n====================== BACKTESTING REPORT ================================\n%s',
