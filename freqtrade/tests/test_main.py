@@ -12,7 +12,7 @@ from freqtrade import DependencyException, OperationalException
 from freqtrade.analyze import SignalType
 from freqtrade.exchange import Exchanges
 from freqtrade.main import create_trade, handle_trade, init, \
-    get_target_bid, _process, execute_sell, check_handle_timedout 
+    get_target_bid, _process, execute_sell, check_handle_timedout
 from freqtrade.misc import get_state, State
 from freqtrade.persistence import Trade
 

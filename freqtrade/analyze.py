@@ -5,13 +5,13 @@ import logging
 from datetime import timedelta
 from enum import Enum
 from typing import List, Dict
-
+from importlib import import_module
 import arrow
 import talib.abstract as ta
 from pandas import DataFrame, to_datetime
 
 from freqtrade.exchange import get_ticker_history
-from freqtrade.vendor.qtpylib.indicators import awesome_oscillator, crossed_above
+from freqtrade.vendor.qtpylib.indicators import awesome_oscillator
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,8 @@ def populate_buy_trend(dataframe: DataFrame, strategy: str = 'default') -> DataF
     :param dataframe: DataFrame
     :return: DataFrame with buy column
     """
-    return globals()["populate_buy_trend_%s" % strategy](dataframe)
+    module = import_module("freqtrade.strategy." + strategy)
+    return module.populate_buy_trend(dataframe)
 
 
 def populate_sell_trend(dataframe: DataFrame, strategy: str = 'default') -> DataFrame:
@@ -87,78 +88,8 @@ def populate_sell_trend(dataframe: DataFrame, strategy: str = 'default') -> Data
     :param dataframe: DataFrame
     :return: DataFrame with buy column
     """
-    return globals()["populate_sell_trend_%s" % strategy](dataframe)
-
-
-# Default strategy
-# TODO: move to strategy class
-def populate_buy_trend_default(dataframe: DataFrame, strategy: str = None) -> DataFrame:
-    dataframe.loc[
-        (
-            (dataframe['fastd'] < 44) &
-            (dataframe['rsi'] < 34) &
-            (dataframe['ema50'] > dataframe['ema150'])
-        ),
-        'buy'] = 1
-    return dataframe
-
-
-def populate_sell_trend_default(dataframe: DataFrame, strategy: str = None) -> DataFrame:
-    dataframe['sell'] = 0
-    return dataframe
-
-
-# New stragegy credit to @baudbox
-def populate_buy_trend_new(dataframe: DataFrame, strategy: str = None) -> DataFrame:
-    dataframe.loc[
-        (dataframe['close'] > 0.00001000) &
-        (dataframe['cci'] < -90.0) &
-        (dataframe['fastd'] < 15) & (dataframe['fastk'] < 15) &
-        (dataframe['fastk'] < dataframe['fastd']) &
-        (dataframe['adx'] > 15),
-        'buy'] = 1
-    return dataframe
-
-
-def populate_sell_trend_new(dataframe: DataFrame, strategy: str = None) -> DataFrame:
-    dataframe['sell'] = 0
-    return dataframe
-
-
-# Base (original) strategy, used in unit tests
-def populate_buy_trend_base(dataframe: DataFrame, strategy: str = None) -> DataFrame:
-    dataframe.loc[
-        (
-            (dataframe['rsi'] < 35) &
-            (dataframe['fastd'] < 35) &
-            (dataframe['adx'] > 30) &
-            (dataframe['plus_di'] > 0.5)
-        ) |
-        (
-            (dataframe['adx'] > 65) &
-            (dataframe['plus_di'] > 0.5)
-        ),
-        'buy'] = 1
-
-    return dataframe
-
-
-def populate_sell_trend_base(dataframe: DataFrame) -> DataFrame:
-    dataframe.loc[
-        (
-            (
-                (crossed_above(dataframe['rsi'], 70)) |
-                (crossed_above(dataframe['fastd'], 70))
-            ) &
-            (dataframe['adx'] > 10) &
-            (dataframe['minus_di'] > 0)
-        ) |
-        (
-            (dataframe['adx'] > 70) &
-            (dataframe['minus_di'] > 0.5)
-        ),
-        'sell'] = 1
-    return dataframe
+    module = import_module("freqtrade.strategy." + strategy)
+    return module.populate_sell_trend(dataframe)
 
 
 def analyze_ticker(ticker_history: List[Dict], strategy: str) -> DataFrame:
