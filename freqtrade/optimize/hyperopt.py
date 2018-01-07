@@ -14,7 +14,7 @@ from pandas import DataFrame
 
 from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex
-from freqtrade.misc import load_config
+from freqtrade.misc import load_config, DEFAULT_STRATEGY
 from freqtrade.optimize.backtesting import backtest
 from freqtrade.optimize.hyperopt_conf import hyperopt_optimize_conf
 from freqtrade.vendor.qtpylib.indicators import crossed_above
@@ -164,7 +164,7 @@ def format_results(results: DataFrame):
 
 
 def buy_strategy_generator(params):
-    def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
+    def populate_buy_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
         conditions = []
         # GUARDS AND TRENDS
         if params['uptrend_long_ema']['enabled']:
@@ -223,6 +223,7 @@ def start(args):
     logger.info('Using config: %s ...', args.config)
     config = load_config(args.config)
     pairs = config['exchange']['pair_whitelist']
+    logger.info('Test pairs: %s', pairs)
     PROCESSED = optimize.preprocess(optimize.load_data(
         pairs=pairs, ticker_interval=args.ticker_interval))
 

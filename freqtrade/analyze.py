@@ -73,7 +73,7 @@ def populate_indicators(dataframe: DataFrame) -> DataFrame:
     return dataframe
 
 
-def populate_buy_trend(dataframe: DataFrame, strategy: str = 'default') -> DataFrame:
+def populate_buy_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
     """
     Based on TA indicators, populates the buy signal for the given dataframe
     :param dataframe: DataFrame
@@ -83,7 +83,7 @@ def populate_buy_trend(dataframe: DataFrame, strategy: str = 'default') -> DataF
     return module.populate_buy_trend(dataframe)
 
 
-def populate_sell_trend(dataframe: DataFrame, strategy: str = 'default') -> DataFrame:
+def populate_sell_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
     """
     Based on TA indicators, populates the sell signal for the given dataframe
     :param dataframe: DataFrame

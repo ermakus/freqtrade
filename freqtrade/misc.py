@@ -13,6 +13,8 @@ from freqtrade import __version__
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_STRATEGY = 'default'
+
 
 class State(enum.Enum):
     RUNNING = 0
@@ -134,9 +136,9 @@ def parse_args(args: List[str]):
     )
     parser.add_argument(
         '-s', '--strategy',
-        help='specify strategy name (default: "default")',
+        help='specify strategy name (default: "{}")'.format(DEFAULT_STRATEGY),
         dest='strategy',
-        default='default',
+        default=DEFAULT_STRATEGY,
         type=str,
         metavar='STRING',
     )

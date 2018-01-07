@@ -16,7 +16,7 @@ from freqtrade import __version__, exchange, persistence, rpc, DependencyExcepti
     OperationalException, TradeException
 from freqtrade.analyze import get_signal, SignalType
 from freqtrade.misc import State, get_state, update_state, parse_args, throttle, \
-    load_config
+    load_config, DEFAULT_STRATEGY
 from freqtrade.persistence import Trade
 from freqtrade.fiat_convert import CryptoToFiatConverter
 from freqtrade.watchdog import Watchdog
@@ -56,7 +56,7 @@ def refresh_whitelist(whitelist: List[str]) -> List[str]:
     return final_list
 
 
-def _process(nb_assets: Optional[int] = 0, strategy: Optional[str] = 'default') -> bool:
+def _process(nb_assets: Optional[int] = 0, strategy: Optional[str] = DEFAULT_STRATEGY) -> bool:
     """
     Queries the persistence layer for open trades and handles them,
     otherwise a new trade is created.
