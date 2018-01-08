@@ -1,1 +1,4 @@
-./bin/trade -c config.json backtesting --realistic-simulation $*
+STRATEGY=${1:-default}
+shift
+echo "Backtest strategy: $STRATEGY"
+./bin/trade -c config.json -dd data -s $STRATEGY backtesting --realistic-simulation $*
