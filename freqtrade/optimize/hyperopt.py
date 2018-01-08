@@ -36,7 +36,7 @@ CURRENT_BEST_LOSS = 100
 EXPECTED_MAX_PROFIT = 3.85
 
 # Configuration and data used by hyperopt
-PROCESSED = optimize.preprocess(optimize.load_data())
+PROCESSED = None  # optimize.preprocess(optimize.load_data())
 OPTIMIZE_CONFIG = hyperopt_optimize_conf()
 
 # Monkey patch config
@@ -225,7 +225,7 @@ def start(args):
     pairs = config['exchange']['pair_whitelist']
     logger.info('Test pairs: %s', pairs)
     PROCESSED = optimize.preprocess(optimize.load_data(
-        pairs=pairs, ticker_interval=args.ticker_interval))
+        args.datadir, pairs=pairs, ticker_interval=args.ticker_interval))
 
     if args.mongodb:
         logger.info('Using mongodb ...')

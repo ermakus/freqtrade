@@ -142,6 +142,14 @@ def parse_args(args: List[str], description: str):
         dest='watchdog_enable',
     )
     parser.add_argument(
+        '-dd', '--datadir',
+        help='path to backtest data (default freqdata/tests/testdata)',
+        dest='datadir',
+        default='freqtrade/tests/testdata',
+        type=str,
+        metavar='PATH',
+    )
+    parser.add_argument(
         '--dynamic-whitelist',
         help='dynamically generate and update whitelist based on 24h BaseVolume (Default 20 currencies)',  # noqa
         dest='dynamic_whitelist',
