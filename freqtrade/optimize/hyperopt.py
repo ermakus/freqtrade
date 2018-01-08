@@ -1,9 +1,10 @@
 # pragma pylint: disable=missing-docstring,W0212,W0603
-
-
 import json
 import logging
 import sys
+import pickle
+import signal
+import os
 from functools import reduce
 from math import exp
 from operator import itemgetter
@@ -42,6 +43,10 @@ EXPECTED_MAX_PROFIT = 3.85
 # Configuration and data used by hyperopt
 PROCESSED = None  # optimize.preprocess(optimize.load_data())
 OPTIMIZE_CONFIG = hyperopt_optimize_conf()
+
+# Hyperopt Trials
+TRIALS_FILE = 'hyperopt_trials.pickle'
+TRIALS = Trials()
 
 # Monkey patch config
 from freqtrade import main  # noqa
@@ -98,6 +103,34 @@ SPACE = {
     'stoploss': hp.quniform('stoploss', -30, -2, 1),
 }
 
+
+def save_trials(trials, trials_path=TRIALS_FILE):
+    "Save hyperopt trials to file"
+    logger.info('Saving Trials to \'{}\''.format(trials_path))
+    pickle.dump(trials, open(trials_path, 'wb'))
+
+
+def read_trials(trials_path=TRIALS_FILE):
+    "Read hyperopt trials file"
+    logger.info('Reading Trials from \'{}\''.format(trials_path))
+    trials = pickle.load(open(trials_path, 'rb'))
+    # os.remove(trials_path)
+    return trials
+
+
+def log_trials_result(trials):
+    try:
+        vals = trials.best_trial['misc']['vals']
+        fix_v = lambda v: v[0] if len(v) else 0
+        vals = { k: fix_v(v) for k, v in vals.items() }
+        best_parameters = space_eval(SPACE, vals)
+        best_result = trials.best_trial['result']['result']
+    except ValueError:
+        best_parameters = {}
+        best_result = 'Sorry, Hyperopt was not able to find good parameters. Please ' \
+                      'try with more epochs (param: -e).'
+    logger.info('Best parameters:\n%s', json.dumps(best_parameters, indent=4))
+    logger.info('Best Result:\n%s', best_result)
 
 def log_results(results):
     """ log results if it is better than any previous evaluation """
@@ -216,7 +249,8 @@ def buy_strategy_generator(params):
 
 
 def start(args):
-    global TOTAL_TRIES, PROCESSED, SPACE
+    global TOTAL_TRIES, PROCESSED, TRIALS, _CURRENT_TRIES
+
     TOTAL_TRIES = args.epochs
 
     exchange._API = Bittrex({'key': '', 'secret': ''})
@@ -239,9 +273,18 @@ def start(args):
         logger.info('Start scripts/start-mongodb.sh and start-hyperopt-worker.sh manually!')
 
         db_name = 'freqtrade_hyperopt'
-        trials = MongoTrials('mongo://127.0.0.1:1234/{}/jobs'.format(db_name), exp_key='exp1')
+        TRIALS = MongoTrials('mongo://127.0.0.1:1234/{}/jobs'.format(db_name), exp_key='exp1')
     else:
-        trials = Trials()
+        logger.info('Preparing Trials..')
+        signal.signal(signal.SIGINT, signal_handler)
+        # read trials file if we have one
+        if os.path.exists(TRIALS_FILE):
+            TRIALS = read_trials()
+            _CURRENT_TRIES = len(TRIALS.results)
+            TOTAL_TRIES = TOTAL_TRIES + _CURRENT_TRIES
+            logger.info(
+                'Continuing with trials. Current: {}, Total: {}'
+                .format(_CURRENT_TRIES, TOTAL_TRIES))
 
     try:
         best_parameters = fmin(
@@ -249,20 +292,19 @@ def start(args):
             space=SPACE,
             algo=tpe.suggest,
             max_evals=TOTAL_TRIES,
-            trials=trials
+            trials=TRIALS
         )
-
-        results = sorted(trials.results, key=itemgetter('loss'))
-        best_result = results[0]['result']
-
     except ValueError:
-        best_parameters = {}
-        best_result = 'Sorry, Hyperopt was not able to find good parameters. Please ' \
-                      'try with more epochs (param: -e).'
+        pass
 
-    # Improve best parameter logging display
-    if best_parameters:
-        best_parameters = space_eval(SPACE, best_parameters)
+    log_trials_result(TRIALS)
+    # Store trials result to file to resume next time
+    save_trials(TRIALS)
 
-    logger.info('Best parameters:\n%s', json.dumps(best_parameters, indent=4))
-    logger.info('Best Result:\n%s', best_result)
+
+def signal_handler(sig, frame):
+    "Hyperopt SIGINT handler"
+    logger.info('Hyperopt received {}'.format(signal.Signals(sig).name))
+    log_trials_result(TRIALS)
+    save_trials(TRIALS)
+    sys.exit(0)
