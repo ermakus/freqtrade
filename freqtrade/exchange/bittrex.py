@@ -53,7 +53,8 @@ class Bittrex(Exchange):
 
         trade_error_messages = [
             'MIN_TRADE_REQUIREMENT_NOT_MET',
-            'ORDER_NOT_OPEN'
+            'ORDER_NOT_OPEN',
+            'UUID_INVALID'
         ]
 
         if response['message'] in temp_error_messages:

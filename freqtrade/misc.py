@@ -225,6 +225,12 @@ def build_subcommands(parser: argparse.ArgumentParser) -> None:
         type=int,
         metavar='INT',
     )
+    hyperopt_cmd.add_argument(
+        '-st', '--save-trials',
+        help='save or use hyperopt trials state',
+        dest='save_trials',
+        action='store_true'
+    )
 
 
 # Required json-schema for user specified config

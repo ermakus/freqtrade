@@ -125,7 +125,7 @@ def log_trials_result(trials):
         vals = { k: fix_v(v) for k, v in vals.items() }
         best_parameters = space_eval(SPACE, vals)
         best_result = trials.best_trial['result']['result']
-    except ValueError:
+    except (ValueError, TypeError):
         best_parameters = {}
         best_result = 'Sorry, Hyperopt was not able to find good parameters. Please ' \
                       'try with more epochs (param: -e).'
@@ -275,16 +275,17 @@ def start(args):
         db_name = 'freqtrade_hyperopt'
         TRIALS = MongoTrials('mongo://127.0.0.1:1234/{}/jobs'.format(db_name), exp_key='exp1')
     else:
-        logger.info('Preparing Trials..')
-        signal.signal(signal.SIGINT, signal_handler)
-        # read trials file if we have one
-        if os.path.exists(TRIALS_FILE):
-            TRIALS = read_trials()
-            _CURRENT_TRIES = len(TRIALS.results)
-            TOTAL_TRIES = TOTAL_TRIES + _CURRENT_TRIES
-            logger.info(
-                'Continuing with trials. Current: {}, Total: {}'
-                .format(_CURRENT_TRIES, TOTAL_TRIES))
+        if args.save_trials:
+            logger.info('Preparing Trials..')
+            signal.signal(signal.SIGINT, signal_handler)
+            # read trials file if we have one
+            if os.path.exists(TRIALS_FILE):
+                TRIALS = read_trials()
+                _CURRENT_TRIES = len(TRIALS.results)
+                TOTAL_TRIES = TOTAL_TRIES + _CURRENT_TRIES
+                logger.info(
+                    'Continuing with trials. Current: {}, Total: {}'
+                    .format(_CURRENT_TRIES, TOTAL_TRIES))
 
     try:
         best_parameters = fmin(
@@ -299,7 +300,8 @@ def start(args):
 
     log_trials_result(TRIALS)
     # Store trials result to file to resume next time
-    save_trials(TRIALS)
+    if args.save_trials:
+        save_trials(TRIALS)
 
 
 def signal_handler(sig, frame):
