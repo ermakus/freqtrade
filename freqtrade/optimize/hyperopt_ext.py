@@ -1,3 +1,8 @@
+from hyperopt import hp
+from pandas import DataFrame
+from functools import reduce
+from freqtrade.vendor.qtpylib.indicators import crossed_above
+
 SPACE = {
     'rsi': hp.choice('rsi', [
         {'enabled': False},
@@ -53,7 +58,7 @@ SPACE = {
     ]),
     'adx': hp.choice('adx', [
         {'enabled': False},
-     {'enabled': True, 'value': hp.quniform('adx-value', 15, 50, 1)}
+        {'enabled': True, 'value': hp.quniform('adx-value', 15, 50, 1)}
     ]),
     'cci': hp.choice('cci', [
         {'enabled': False},
@@ -98,7 +103,7 @@ SPACE = {
 }
 
 
-def buy_strategy_generator(params):
+def buy_strategy_generator(params):  # noqa C901
     def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
         conditions = []
         # GUARDS AND TRENDS
@@ -111,7 +116,9 @@ def buy_strategy_generator(params):
             conditions.append(dataframe['close'] > params['close']['value'])
 
         if 'volume' in params and params['volume']['enabled']:
-            conditions.append(dataframe['volume'] > dataframe['volume'].mean() * params['volume']['value'])
+            conditions.append(
+                dataframe['volume'] > dataframe['volume'].mean() * params['volume']['value']
+            )
 
         if 'close_sma' in params and params['close_sma']['enabled']:
             conditions.append(dataframe['close'] < dataframe['sma'])

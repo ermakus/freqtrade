@@ -17,11 +17,12 @@ from freqtrade.misc import get_state, State
 from freqtrade.persistence import Trade
 import freqtrade.main as main
 
+TEST_STRATEGY = 'base'
+
 
 # Test that main() can start backtesting or hyperopt.
 # and also ensure we can pass some specific arguments
 # argument parsing is done in test_misc.py
-
 def test_parse_args_backtesting(mocker):
     backtesting_mock = mocker.patch(
         'freqtrade.optimize.backtesting.start', MagicMock())
@@ -48,8 +49,6 @@ def test_main_start_hyperopt(mocker):
     assert call_args.loglevel == 20
     assert call_args.subparser == 'hyperopt'
     assert call_args.func is not None
-
-TEST_STRATEGY = 'base'
 
 
 def test_process_trade_creation(default_conf, ticker, limit_buy_order, health, mocker):

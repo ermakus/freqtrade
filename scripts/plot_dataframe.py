@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-
 import sys
-import argparse
-import matplotlib  # Install PYQT5 manually if you want to test this helper function
-matplotlib.use("Qt5Agg")
-import matplotlib.pyplot as plt
 from freqtrade import exchange, analyze
 from freqtrade.misc import parse_args_common
 
+import matplotlib  # Install PYQT5 manually if you want to test this helper function
+matplotlib.use("Qt5Agg")
+import matplotlib.pyplot as plt  # noqa
 
-def plot_parse_args(args ):
+
+def plot_parse_args(args):
     parser = parse_args_common(args, 'Graph utility')
     parser.add_argument(
         '-p', '--pair',
-        help = 'What currency pair',
-        dest = 'pair',
-        default = 'BTC_ETH',
-        type = str,
+        help='What currency pair',
+        dest='pair',
+        default='BTC_ETH',
+        type=str,
     )
     return parser.parse_args(args)
 
@@ -32,7 +31,7 @@ def plot_analyzed_dataframe(args) -> None:
     # Init Bittrex to use public API
     exchange._API = exchange.Bittrex({'key': '', 'secret': ''})
     ticker = exchange.get_ticker_history(pair)
-    dataframe = analyze.analyze_ticker(ticker)
+    dataframe = analyze.analyze_ticker(ticker, strategy=args.strategy)
 
     dataframe.loc[dataframe['buy'] == 1, 'buy_price'] = dataframe['close']
     dataframe.loc[dataframe['sell'] == 1, 'sell_price'] = dataframe['close']

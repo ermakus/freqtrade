@@ -172,6 +172,7 @@ def check_handle_timedout(timeoutvalue: int) -> None:
         except TradeException as e:
             logger.warning('Error in order timeout check: {}'.format(e))
 
+
 def execute_sell(trade: Trade, limit: float) -> None:
     """
     Executes a limit sell for the given trade and limit
@@ -423,7 +424,7 @@ def cleanup() -> None:
     exit(0)
 
 
-def main(sysargv=sys.argv[1:]) -> None:
+def main(sysargv=sys.argv[1:]) -> None:  # noqa C901
     """
     Loads and validates the config and handles the main loop
     :return: None

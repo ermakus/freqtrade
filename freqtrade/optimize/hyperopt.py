@@ -7,15 +7,13 @@ import signal
 import os
 from functools import reduce
 from math import exp
-from operator import itemgetter
-
 from hyperopt import fmin, tpe, hp, Trials, STATUS_OK, STATUS_FAIL, space_eval
 from hyperopt.mongoexp import MongoTrials
 from pandas import DataFrame
 
 from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex
-from freqtrade.misc import load_config, DEFAULT_STRATEGY
+from freqtrade.misc import load_config
 from freqtrade.optimize.backtesting import backtest
 from freqtrade.optimize.hyperopt_conf import hyperopt_optimize_conf
 from freqtrade.vendor.qtpylib.indicators import crossed_above
@@ -119,10 +117,14 @@ def read_trials(trials_path=TRIALS_FILE):
 
 
 def log_trials_result(trials):
+
+    def arr_to_scalar(v):
+        return v[0] if len(v) else 0
+
     try:
         vals = trials.best_trial['misc']['vals']
-        fix_v = lambda v: v[0] if len(v) else 0
-        vals = { k: fix_v(v) for k, v in vals.items() }
+        # Convert to format accepted by space_eval
+        vals = {k: arr_to_scalar(v) for k, v in vals.items()}
         best_parameters = space_eval(SPACE, vals)
         best_result = trials.best_trial['result']['result']
     except (ValueError, TypeError):
@@ -131,6 +133,7 @@ def log_trials_result(trials):
                       'try with more epochs (param: -e).'
     logger.info('Best parameters:\n%s', json.dumps(best_parameters, indent=4))
     logger.info('Best Result:\n%s', best_result)
+
 
 def log_results(results):
     """ log results if it is better than any previous evaluation """
@@ -288,14 +291,14 @@ def start(args):
                     .format(_CURRENT_TRIES, TOTAL_TRIES))
 
     try:
-        best_parameters = fmin(
+        fmin(
             fn=optimizer,
             space=SPACE,
             algo=tpe.suggest,
             max_evals=TOTAL_TRIES,
             trials=TRIALS
         )
-    except ValueError:
+    except (ValueError, KeyboardInterrupt):
         pass
 
     log_trials_result(TRIALS)
