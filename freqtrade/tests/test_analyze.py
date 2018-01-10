@@ -28,12 +28,12 @@ def test_dataframe_correct_length(result):
 
 
 def test_populates_buy_trend(result):
-    dataframe = populate_buy_trend(populate_indicators(result), TEST_STRATEGY)
+    dataframe = populate_buy_trend(populate_indicators(result, TEST_STRATEGY), TEST_STRATEGY)
     assert 'buy' in dataframe.columns
 
 
 def test_populates_sell_trend(result):
-    dataframe = populate_sell_trend(populate_indicators(result), TEST_STRATEGY)
+    dataframe = populate_sell_trend(populate_indicators(result, TEST_STRATEGY), TEST_STRATEGY)
     assert 'sell' in dataframe.columns
 
 

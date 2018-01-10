@@ -179,7 +179,7 @@ def start(args):
     from freqtrade import main
     main._CONF = config
 
-    preprocessed = preprocess(data)
+    preprocessed = preprocess(data, args.strategy)
     # Print timeframe
     min_date, max_date = get_timeframe(preprocessed)
     logger.info('Measuring data from %s up to %s ...', min_date.isoformat(), max_date.isoformat())

@@ -37,7 +37,7 @@ def parse_ticker_dataframe(ticker: list) -> DataFrame:
     return frame
 
 
-def populate_indicators(dataframe: DataFrame) -> DataFrame:
+def populate_indicators(dataframe: DataFrame, strategy: str) -> DataFrame:
     """
     Adds several different TA indicators to the given DataFrame
 
@@ -45,6 +45,11 @@ def populate_indicators(dataframe: DataFrame) -> DataFrame:
     you are using. Let uncomment only the indicator you are using in your strategies
     or your hyperopt configuration, otherwise you will waste your memory and CPU usage.
     """
+
+    module = import_module("freqtrade.strategy." + strategy)
+    # Check if module override indicators
+    if hasattr(module, 'populate_indicators'):
+        return module.populate_indicators(dataframe)
 
     # Momentum Indicator
     # ------------------------------------
@@ -253,7 +258,7 @@ def analyze_ticker(ticker_history: List[Dict], strategy: str) -> DataFrame:
     :return DataFrame with ticker data and indicator data
     """
     dataframe = parse_ticker_dataframe(ticker_history)
-    dataframe = populate_indicators(dataframe)
+    dataframe = populate_indicators(dataframe, strategy)
     dataframe = populate_buy_trend(dataframe, strategy)
     dataframe = populate_sell_trend(dataframe, strategy)
     return dataframe

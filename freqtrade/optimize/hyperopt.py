@@ -269,7 +269,7 @@ def start(args):
     pairs = config['exchange']['pair_whitelist']
     logger.info('Test pairs: %s', pairs)
     PROCESSED = optimize.preprocess(optimize.load_data(
-        args.datadir, pairs=pairs, ticker_interval=args.ticker_interval))
+        args.datadir, pairs=pairs, ticker_interval=args.ticker_interval), args.strategy)
 
     if args.mongodb:
         logger.info('Using mongodb ...')
