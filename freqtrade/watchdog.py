@@ -7,12 +7,17 @@ from multiprocessing import Value
 logger = logging.getLogger('freqtrade.watchdog')
 
 WATCHDOG_TIMEOUT = 300
+KILL_TIMEOUT = 60
 
 
 class Watchdog:
 
-    shared_heartbeat = Value('d', 0.0)
-    kill_signal = None
+    def __init__(self, timeout=WATCHDOG_TIMEOUT, kill_timeout=KILL_TIMEOUT):
+        self.shared_heartbeat = Value('d', 0.0)
+        self.kill_signal = None
+        self.timeout = timeout
+        self.kill_timeout = kill_timeout
+        self.heartbeat()
 
     def heartbeat(self) -> None:
         logger.debug("Heartbeat")
@@ -22,13 +27,29 @@ class Watchdog:
         logger.warning("Kill signal: {}".format(signum))
         self.kill_signal = signum
 
+    def try_kill(self, pid):
+        os.kill(pid, signal.SIGINT)
+        for count in range(0, self.kill_timeout):
+            try:
+                pid, err_code = os.waitpid(pid, os.WNOHANG)
+                if pid != 0 or err_code != 0:
+                    return True
+                time.sleep(1)
+            except OSError:
+                return True
+        return False
+
     def kill(self, pid):
         logger.info("Stopping pid {}".format(pid))
-        os.kill(pid, signal.SIGTERM)  # Better use sigint and then sigterm?
-        os.wait()
+        if pid:
+            if self.try_kill(pid):
+                logger.info("Process finished gracefully")
+            else:
+                logger.warning("Process not responded, kill by SIGTERM")
+                os.kill(pid, signal.SIGTERM)
+                os.wait()
 
     def start(self) -> bool:
-        self.heartbeat()
         pid = os.fork()
         if pid != 0:
             # In watchdog proces, run it
@@ -54,8 +75,10 @@ class Watchdog:
 
                 timeout = time.time() - self.shared_heartbeat.value
 
-                if timeout > WATCHDOG_TIMEOUT:
+                if timeout > self.timeout:
                     logger.warning("Kill process due to timeout: {}".format(timeout))
+                    if not pid:
+                        return False
                     self.kill(pid)
                     new_pid = os.fork()
                     if new_pid == 0:

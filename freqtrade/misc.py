@@ -136,12 +136,6 @@ def parse_args(args: List[str], description: str):
         dest='dry_run_db',
     )
     parser.add_argument(
-        '-w', '--watchdog',
-        help='Run under watchdog (restart process if main loop is stalled)',  # noqa
-        action='store_true',
-        dest='watchdog_enable',
-    )
-    parser.add_argument(
         '-dd', '--datadir',
         help='path to backtest data (default freqdata/tests/testdata)',
         dest='datadir',
@@ -157,6 +151,12 @@ def parse_args(args: List[str], description: str):
         type=int,
         metavar='INT',
         nargs='?',
+    )
+    parser.add_argument(
+        '-w', '--watchdog',
+        help='Run under watchdog (restart process if main loop is stalled)',  # noqa
+        action='store_true',
+        dest='watchdog_enable',
     )
 
     build_subcommands(parser)
