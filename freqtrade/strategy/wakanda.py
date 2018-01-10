@@ -23,21 +23,23 @@ def populate_indicators(dataframe: DataFrame) -> DataFrame:
     dataframe['slowfastd-previous'] = dataframe.slowfastd.shift(1)
     return dataframe
 
+
 def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
     dataframe.loc[
-        ((dataframe['adx'] > 50) | (dataframe['slowadx'] > 26)) & 
+        ((dataframe['adx'] > 50) | (dataframe['slowadx'] > 26)) &
         (dataframe['cci'] < -100) &
         (dataframe['fastk-previous'] < 20) & (dataframe['fastd-previous'] < 20) &
         (dataframe['slowfastk-previous'] < 30) & (dataframe['slowfastd-previous'] < 30) &
-        (dataframe['fastk-previous'] < dataframe['fastd-previous']) & (dataframe['fastk'] > dataframe['fastd']) &
+        (dataframe['fastk-previous'] < dataframe['fastd-previous']) &
+        (dataframe['fastk'] > dataframe['fastd']) &
         (dataframe['mean-volume'] > 0.75) & (dataframe['close'] > 0.00000100),
         'buy'] = 1
     return dataframe
 
 
 def populate_sell_trend(dataframe: DataFrame) -> DataFrame:
-    dataframe.loc[ 
-        (dataframe['slowadx'] < 25) & 
+    dataframe.loc[
+        (dataframe['slowadx'] < 25) &
         ((dataframe['fastk'] > 70) | (dataframe['fastd'] > 70)) &
         (dataframe['fastk-previous'] < dataframe['fastd-previous']) &
         (dataframe['close'] > dataframe['ema5']),
