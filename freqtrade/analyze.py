@@ -4,7 +4,7 @@ Functions to analyze ticker data with indicators and produce buy and sell signal
 import logging
 from datetime import timedelta
 from enum import Enum
-from typing import List, Dict
+from typing import List, Dict, Optional
 from importlib import import_module
 import arrow
 import talib.abstract as ta
@@ -259,13 +259,14 @@ def analyze_ticker(ticker_history: List[Dict], strategy: str) -> DataFrame:
     return dataframe
 
 
-def get_signal(pair: str, signal: SignalType, strategy: str) -> bool:
+def get_signal(pair: str, signal: SignalType, strategy: str,
+               tick_interval: Optional[int] = 5) -> bool:
     """
     Calculates current signal based several technical analysis indicators
     :param pair: pair in format BTC_ANT or BTC-ANT
     :return: True if pair is good for buying, False otherwise
     """
-    ticker_hist = get_ticker_history(pair)
+    ticker_hist = get_ticker_history(pair, tick_interval)
     if not ticker_hist:
         logger.warning('Empty ticker history for pair %s', pair)
         return False
