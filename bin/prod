@@ -1,1 +1,4 @@
-nohup ./bin/trade -w --dynamic-whitelist 18 $* &
+STRATEGY=${1:-default}
+shift
+echo "Run strategy: $STRATEGY"
+nohup ./bin/trade -w -s $STRATEGY --dynamic-whitelist 18 $* &
