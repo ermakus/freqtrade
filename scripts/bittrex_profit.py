@@ -26,11 +26,10 @@ def full_stats(filename, days):
     df = read_csv( buf,
                    parse_dates=["Opened","Closed"],
                    index_col="Closed")
-
+    df.sort_index(inplace=True)
     if days:
         last = df.index[-1].to_pydatetime().replace(hour=0, minute=0, second=0) - timedelta(days=days-1)
         df = df.loc[df.index >= last]
-        print("Last %s days" % days)
 
     print("--------------------------------------")
     print("Date      Profit       Trades Buy Sell")
