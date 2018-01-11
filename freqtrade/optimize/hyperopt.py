@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # set TARGET_TRADES to suit your number concurrent trades so its realistic to 20days of data
 TARGET_TRADES = 1100
-TOTAL_TRIES = None
+TOTAL_TRIES = 0
 _CURRENT_TRIES = 0
 CURRENT_BEST_LOSS = 100
 
@@ -103,21 +103,20 @@ SPACE = {
 
 
 def save_trials(trials, trials_path=TRIALS_FILE):
-    "Save hyperopt trials to file"
+    """Save hyperopt trials to file"""
     logger.info('Saving Trials to \'{}\''.format(trials_path))
     pickle.dump(trials, open(trials_path, 'wb'))
 
 
 def read_trials(trials_path=TRIALS_FILE):
-    "Read hyperopt trials file"
+    """Read hyperopt trials file"""
     logger.info('Reading Trials from \'{}\''.format(trials_path))
     trials = pickle.load(open(trials_path, 'rb'))
-    # os.remove(trials_path)
+    os.remove(trials_path)
     return trials
 
 
 def log_trials_result(trials):
-
     def arr_to_scalar(v):
         return v[0] if len(v) else 0
 
@@ -252,7 +251,7 @@ def buy_strategy_generator(params):
 
 
 def start(args):
-    global TOTAL_TRIES, PROCESSED, TRIALS, _CURRENT_TRIES
+    global TOTAL_TRIES, PROCESSED, SPACE, TRIALS, _CURRENT_TRIES
 
     TOTAL_TRIES = args.epochs
 
