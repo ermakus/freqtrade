@@ -44,6 +44,23 @@ class DefaultTimeout(TimeoutSauce):
 
 requests.adapters.TimeoutSauce = DefaultTimeout
 
+DEFAULT_TIMEOUT = 120
+
+
+# Set requests default timeout (fix for #127)
+class DefaultTimeout(TimeoutSauce):
+    def __init__(self, *args, **kwargs):
+        connect = kwargs.get('connect', DEFAULT_TIMEOUT)
+        read = kwargs.get('read', connect)
+        if connect is None:
+            connect = DEFAULT_TIMEOUT
+        if read is None:
+            read = connect
+        super(DefaultTimeout, self).__init__(connect=connect, read=read)
+
+
+requests.adapters.TimeoutSauce = DefaultTimeout
+
 
 def refresh_whitelist(whitelist: List[str]) -> List[str]:
     """
