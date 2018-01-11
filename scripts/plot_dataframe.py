@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 import sys
 from freqtrade import exchange, analyze
-from freqtrade.misc import parse_args_common
+from freqtrade.misc import common_args_parser
 
 import matplotlib  # Install PYQT5 manually if you want to test this helper function
 matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt  # noqa
 
 
-def plot_parse_args(args):
-    parser = parse_args_common(args, 'Graph utility')
+def plot_parse_args(args ):
+    parser = common_args_parser(args, 'Graph utility')
     parser.add_argument(
         '-p', '--pair',
         help='What currency pair',

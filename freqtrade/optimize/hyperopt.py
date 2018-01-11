@@ -7,10 +7,12 @@ import signal
 import os
 from functools import reduce
 from math import exp
-from hyperopt import fmin, tpe, hp, Trials, STATUS_OK, STATUS_FAIL, space_eval
+from operator import itemgetter
+from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, hp, space_eval, tpe
 from hyperopt.mongoexp import MongoTrials
 from pandas import DataFrame
 
+from freqtrade import main  # noqa
 from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex
 from freqtrade.misc import load_config
@@ -202,7 +204,7 @@ def format_results(results: DataFrame):
                 results.profit_percent.mean() * 100.0,
                 results.profit_BTC.sum(),
                 results.duration.mean() * 5,
-            )
+    )
 
 
 def buy_strategy_generator(params):
