@@ -137,8 +137,8 @@ def parse_args(args: List[str], description: str):
         dest='dry_run_db',
     )
     parser.add_argument(
-        '-dd', '--datadir',
-        help='path to backtest data (default freqdata/tests/testdata)',
+        '--datadir',
+        help='path to backtest data (default freqdata/tests/testdata',
         dest='datadir',
         default=os.path.join('freqtrade', 'tests', 'testdata'),
         type=str,
@@ -201,6 +201,13 @@ def build_subcommands(parser: argparse.ArgumentParser) -> None:
         action='store_true',
         dest='refresh_pairs',
     )
+    backtesting_cmd.add_argument(
+        '--timeperiod',
+        help='Use the last N ticks of data.',
+        default=None,
+        type=int,
+        dest='timeperiod',
+    )
 
     # Add hyperopt subcommand
     hyperopt_cmd = subparsers.add_parser('hyperopt', help='hyperopt module')
@@ -228,10 +235,17 @@ def build_subcommands(parser: argparse.ArgumentParser) -> None:
         metavar='INT',
     )
     hyperopt_cmd.add_argument(
-        '-st', '--save-trials',
+        '--save-trials',
         help='save or use hyperopt trials state',
         dest='save_trials',
         action='store_true'
+    )
+    hyperopt_cmd.add_argument(
+        '--timeperiod',
+        help='Use the last N ticks of data.',
+        default=None,
+        type=int,
+        dest='timeperiod',
     )
 
 

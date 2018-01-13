@@ -54,6 +54,7 @@ def create_trials(mocker):
 
 def test_start_calls_fmin(mocker):
     trials = create_trials(mocker)
+    mocker.patch('freqtrade.optimize.tickerdata_to_dataframe')
     mocker.patch('freqtrade.optimize.hyperopt.TRIALS', return_value=trials)
     mocker.patch('freqtrade.optimize.hyperopt.sorted',
                  return_value=trials.results)
@@ -71,7 +72,7 @@ def test_start_calls_fmin(mocker):
 def test_start_uses_mongotrials(mocker):
     mock_mongotrials = mocker.patch('freqtrade.optimize.hyperopt.MongoTrials',
                                     return_value=create_trials(mocker))
-    mocker.patch('freqtrade.optimize.preprocess')
+    mocker.patch('freqtrade.optimize.tickerdata_to_dataframe')
     mocker.patch('freqtrade.optimize.load_data')
     mocker.patch('freqtrade.optimize.hyperopt.fmin', return_value={})
 
@@ -106,9 +107,50 @@ def test_no_log_if_loss_does_not_improve(mocker):
     assert not logger.called
 
 
+"""
+def test_fmin_best_results(mocker, caplog):
+    fmin_result = {
+        "adx": 1,
+        "adx-value": 15.0,
+        "fastd": 1,
+        "fastd-value": 40.0,
+        "green_candle": 1,
+        "mfi": 0,
+        "over_sar": 0,
+        "rsi": 1,
+        "rsi-value": 37.0,
+        "trigger": 2,
+        "uptrend_long_ema": 1,
+        "uptrend_short_ema": 0,
+        "uptrend_sma": 0,
+        "stoploss": -0.1,
+    }
+
+    mocker.patch('freqtrade.optimize.hyperopt.MongoTrials', return_value=create_trials(mocker))
+    mocker.patch('freqtrade.optimize.tickerdata_to_dataframe')
+    mocker.patch('freqtrade.optimize.load_data')
+    mocker.patch('freqtrade.optimize.hyperopt.fmin', return_value=fmin_result)
+
+    args = mocker.Mock(epochs=1, config='config.json.example')
+    start(args)
+
+    exists = [
+        'Best parameters',
+        '"adx": {\n        "enabled": true,\n        "value": 15.0\n    },',
+        '"green_candle": {\n        "enabled": true\n    },',
+        '"mfi": {\n        "enabled": false\n    },',
+        '"trigger": {\n        "type": "ao_cross_zero"\n    },',
+        '"stoploss": -0.1',
+    ]
+
+    for line in exists:
+        assert line in caplog.text
+"""
+
+
 def test_fmin_throw_value_error(mocker, caplog):
     mocker.patch('freqtrade.optimize.hyperopt.MongoTrials', return_value=create_trials(mocker))
-    mocker.patch('freqtrade.optimize.preprocess')
+    mocker.patch('freqtrade.optimize.tickerdata_to_dataframe')
     mocker.patch('freqtrade.optimize.load_data')
     mocker.patch('freqtrade.optimize.hyperopt.fmin', side_effect=ValueError())
 
