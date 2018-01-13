@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt  # noqa
 
 
 def plot_parse_args(args ):
-    parser = common_args_parser(args, 'Graph utility')
+    parser = common_args_parser(description='Graph utility')
     parser.add_argument(
         '-p', '--pair',
         help='What currency pair',
