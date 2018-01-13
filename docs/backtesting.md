@@ -60,6 +60,10 @@ Example:
 python3 ./freqtrade/main.py backtesting --timeperiod -200
 ```
 
+**Exporting trades to file**
+```bash
+freqtrade backtesting --export trades
+```
 
 For help about backtesting usage, please refer to 
 [Backtesting commands](#backtesting-commands).

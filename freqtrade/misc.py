@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_STRATEGY = 'default'
 
 
+def file_dump_json(filename, data):
+    with open(filename, 'w') as fp:
+        json.dump(data, fp)
+
+
 class State(enum.Enum):
     RUNNING = 0
     STOPPED = 1
@@ -207,6 +212,14 @@ def build_subcommands(parser: argparse.ArgumentParser) -> None:
         default=None,
         type=int,
         dest='timeperiod',
+    )
+    backtesting_cmd.add_argument(
+        '--export',
+        help='Export backtest results, argument are: trades\
+              Example --export trades',
+        type=str,
+        default=None,
+        dest='export',
     )
 
     # Add hyperopt subcommand
