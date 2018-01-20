@@ -177,7 +177,8 @@ def test_load_tickerdata_file():
 
 
 def test_tickerdata_to_dataframe():
-    tick = load_tickerdata_file(None, 'BTC_UNITEST', 1)
+    timerange = ((None, 'line'), None, -100)
+    tick = load_tickerdata_file(None, 'BTC_UNITEST', 1, timerange=timerange)
     tickerlist = {'BTC_UNITEST': tick}
-    data = optimize.tickerdata_to_dataframe(tickerlist, strategy=TEST_STRATEGY, timeperiod=-100)
+    data = optimize.tickerdata_to_dataframe(tickerlist, strategy=TEST_STRATEGY)
     assert 100 == len(data['BTC_UNITEST'])

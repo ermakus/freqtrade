@@ -63,7 +63,8 @@ def test_start_calls_fmin(mocker):
     mocker.patch('freqtrade.optimize.hyperopt.space_eval', return_value={})
     mock_fmin = mocker.patch('freqtrade.optimize.hyperopt.fmin', return_value={})
 
-    args = mocker.Mock(epochs=1, config='config.json.example', mongodb=False, save_trials=False)
+    args = mocker.Mock(epochs=1, config='config.json.example', mongodb=False,
+                       save_trials=False, timerange=None)
     start(args)
 
     mock_fmin.assert_called_once()
@@ -76,7 +77,8 @@ def test_start_uses_mongotrials(mocker):
     mocker.patch('freqtrade.optimize.load_data')
     mocker.patch('freqtrade.optimize.hyperopt.fmin', return_value={})
 
-    args = mocker.Mock(epochs=1, config='config.json.example', mongodb=True, save_trials=False)
+    args = mocker.Mock(epochs=1, config='config.json.example', mongodb=True,
+                       save_trials=False, timerange=None)
     start(args)
 
     mock_mongotrials.assert_called_once()
@@ -110,6 +112,7 @@ def test_no_log_if_loss_does_not_improve(mocker):
 """
 def test_fmin_best_results(mocker, caplog):
     fmin_result = {
+        "macd_below_zero": 0,
         "adx": 1,
         "adx-value": 15.0,
         "fastd": 1,
@@ -131,7 +134,8 @@ def test_fmin_best_results(mocker, caplog):
     mocker.patch('freqtrade.optimize.load_data')
     mocker.patch('freqtrade.optimize.hyperopt.fmin', return_value=fmin_result)
 
-    args = mocker.Mock(epochs=1, config='config.json.example')
+    args = mocker.Mock(epochs=1, config='config.json.example',
+                       timerange=None)
     start(args)
 
     exists = [
@@ -139,7 +143,7 @@ def test_fmin_best_results(mocker, caplog):
         '"adx": {\n        "enabled": true,\n        "value": 15.0\n    },',
         '"green_candle": {\n        "enabled": true\n    },',
         '"mfi": {\n        "enabled": false\n    },',
-        '"trigger": {\n        "type": "ao_cross_zero"\n    },',
+        '"trigger": {\n        "type": "faststoch10"\n    },',
         '"stoploss": -0.1',
     ]
 
@@ -154,7 +158,8 @@ def test_fmin_throw_value_error(mocker, caplog):
     mocker.patch('freqtrade.optimize.load_data')
     mocker.patch('freqtrade.optimize.hyperopt.fmin', side_effect=ValueError())
 
-    args = mocker.Mock(epochs=1, config='config.json.example', save_trials=False)
+    args = mocker.Mock(epochs=1, config='config.json.example',
+                       save_trials=False, timerange=None)
     start(args)
 
     exists = [
@@ -188,7 +193,8 @@ def test_resuming_previous_hyperopt_results_succeeds(mocker):
                  return_value={})
     args = mocker.Mock(epochs=1,
                        config='config.json.example',
-                       mongodb=False)
+                       mongodb=False,
+                       timerange=None)
 
     start(args)
 

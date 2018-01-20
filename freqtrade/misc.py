@@ -4,6 +4,7 @@ import json
 import logging
 import time
 import os
+import re
 from typing import Any, Callable, Dict, List
 
 from jsonschema import Draft4Validator, validate
@@ -199,19 +200,19 @@ def backtesting_options(parser: argparse.ArgumentParser) -> None:
         dest='refresh_pairs',
     )
     parser.add_argument(
-        '--timeperiod',
-        help='Use the last N ticks of data.',
-        default=None,
-        type=int,
-        dest='timeperiod',
-    )
-    parser.add_argument(
         '--export',
         help='Export backtest results, argument are: trades\
               Example --export trades',
         type=str,
         default=None,
         dest='export',
+    )
+    parser.add_argument(
+        '--timerange',
+        help='Specify what timerange of data to use.',
+        default=None,
+        type=str,
+        dest='timerange',
     )
 
 
@@ -238,18 +239,18 @@ def hyperopt_options(parser: argparse.ArgumentParser) -> None:
         type=int,
         metavar='INT',
     )
-    hyperopt_cmd.add_argument(
+    parser.add_argument(
         '--save-trials',
         help='save or use hyperopt trials state',
         dest='save_trials',
         action='store_true'
     )
-    hyperopt_cmd.add_argument(
-        '--timeperiod',
-        help='Use the last N ticks of data.',
+    parser.add_argument(
+        '--timerange',
+        help='Specify what timerange of data to use.',
         default=None,
-        type=int,
-        dest='timeperiod',
+        type=str,
+        dest='timerange',
     )
 
 
@@ -268,6 +269,36 @@ def build_subcommands(parser: argparse.ArgumentParser) -> None:
     hyperopt_cmd = subparsers.add_parser('hyperopt', help='hyperopt module')
     hyperopt_cmd.set_defaults(func=hyperopt.start)
     hyperopt_options(hyperopt_cmd)
+
+
+def parse_timerange(text):
+    if text is None:
+        return None
+    syntax = [('^-(\d{8})$',        (None,    'date')),
+              ('^(\d{8})-$',        ('date',  None)),
+              ('^(\d{8})-(\d{8})$', ('date',  'date')),
+              ('^(-\d+)$',          (None,    'line')),
+              ('^(\d+)-$',          ('line',  None)),
+              ('^(\d+)-(\d+)$',     ('index', 'index'))]
+    for rex, stype in syntax:
+        # Apply the regular expression to text
+        m = re.match(rex, text)
+        if m:  # Regex has matched
+            rvals = m.groups()
+            n = 0
+            start = None
+            stop = None
+            if stype[0]:
+                start = rvals[n]
+                if stype[0] != 'date':
+                    start = int(start)
+                n += 1
+            if stype[1]:
+                stop = rvals[n]
+                if stype[1] != 'date':
+                    stop = int(stop)
+            return (stype, start, stop)
+    raise Exception('Incorrect syntax for timerange "%s"' % text)
 
 
 # Required json-schema for user specified config

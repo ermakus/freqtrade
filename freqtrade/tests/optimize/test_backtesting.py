@@ -6,11 +6,18 @@ import pandas as pd
 from unittest.mock import MagicMock
 from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex
-from freqtrade.optimize import preprocess, trim_tickerlist
+from freqtrade.optimize import preprocess
 from freqtrade.optimize.backtesting import backtest, generate_text_table, get_timeframe
 import freqtrade.optimize.backtesting as backtesting
 
 TEST_STRATEGY = 'base'
+
+
+def trim_dictlist(dl, num):
+    new = {}
+    for pair, pair_data in dl.items():
+        new[pair] = pair_data[num:]
+    return new
 
 
 def test_generate_text_table():
@@ -45,6 +52,7 @@ def test_backtest(default_conf, mocker):
     exchange._API = Bittrex({'key': '', 'secret': ''})
 
     data = optimize.load_data(None, ticker_interval=5, pairs=['BTC_ETH'])
+    data = trim_dictlist(data, -200)
     results = backtest({'stake_amount': default_conf['stake_amount'],
                         'processed': optimize.preprocess(data, TEST_STRATEGY),
                         'max_open_trades': 10,
@@ -59,6 +67,7 @@ def test_backtest_1min_ticker_interval(default_conf, mocker):
 
     # Run a backtesting for an exiting 5min ticker_interval
     data = optimize.load_data(None, ticker_interval=1, pairs=['BTC_UNITEST'])
+    data = trim_dictlist(data, -200)
     results = backtest({'stake_amount': default_conf['stake_amount'],
                         'processed': optimize.preprocess(data, TEST_STRATEGY),
                         'max_open_trades': 1,
@@ -68,8 +77,8 @@ def test_backtest_1min_ticker_interval(default_conf, mocker):
 
 
 def load_data_test(what):
-    data = optimize.load_data(None, ticker_interval=1, pairs=['BTC_UNITEST'])
-    data = trim_tickerlist(data, -100)
+    timerange = ((None, 'line'), None, -100)
+    data = optimize.load_data(None, ticker_interval=1, pairs=['BTC_UNITEST'], timerange=timerange)
     pair = data['BTC_UNITEST']
     datalen = len(pair)
     # Depending on the what parameter we now adjust the
@@ -129,6 +138,7 @@ def simple_backtest(config, contour, num_results):
 def test_backtest2(default_conf, mocker):
     mocker.patch.dict('freqtrade.main._CONF', default_conf)
     data = optimize.load_data(None, ticker_interval=5, pairs=['BTC_ETH'])
+    data = trim_dictlist(data, -200)
     results = backtest({'stake_amount': default_conf['stake_amount'],
                         'processed': optimize.preprocess(data, TEST_STRATEGY),
                         'max_open_trades': 10,
@@ -156,10 +166,10 @@ def test_backtest_pricecontours(default_conf, mocker):
         simple_backtest(default_conf, contour, numres)
 
 
-def mocked_load_data(datadir, pairs=[], ticker_interval=0, refresh_pairs=False):
-    tickerdata = optimize.load_tickerdata_file(datadir, 'BTC_UNITEST', 1)
+def mocked_load_data(datadir, pairs=[], ticker_interval=0, refresh_pairs=False, timerange=None):
+    tickerdata = optimize.load_tickerdata_file(datadir, 'BTC_UNITEST', 1, timerange=timerange)
     pairdata = {'BTC_UNITEST': tickerdata}
-    return trim_tickerlist(pairdata, -100)
+    return pairdata
 
 
 def test_backtest_start(default_conf, mocker, caplog):
@@ -174,8 +184,8 @@ def test_backtest_start(default_conf, mocker, caplog):
     args.live = False
     args.strategy = TEST_STRATEGY
     args.datadir = None
-    args.timeperiod = None  # needed due to MagicMock malleability
     args.export = None
+    args.timerange = '-100'  # needed due to MagicMock malleability
     backtesting.start(args)
     # check the logs, that will contain the backtest result
     exists = ['Using max_open_trades: 1 ...',
