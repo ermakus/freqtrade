@@ -128,7 +128,7 @@ def common_args_parser(description: str):
     )
     parser.add_argument(
         '--datadir',
-        help='path to backtest data (default freqdata/tests/testdata',
+        help='path to backtest data (default freqdata/tests/testdata)',
         dest='datadir',
         default=os.path.join('freqtrade', 'tests', 'testdata'),
         type=str,
@@ -400,7 +400,6 @@ CONF_SCHEMA = {
         'stake_amount',
         'fiat_display_currency',
         'dry_run',
-        'minimal_roi',
         'bid_strategy',
         'telegram'
     ]

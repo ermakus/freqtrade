@@ -5,7 +5,6 @@ import sys
 import pickle
 import signal
 import os
-from functools import reduce
 from math import exp
 from operator import itemgetter
 from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, hp, space_eval, tpe
@@ -17,8 +16,8 @@ from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex
 from freqtrade.misc import load_config
 from freqtrade.optimize.backtesting import backtest
-from freqtrade.optimize.hyperopt_conf import hyperopt_optimize_conf
-from freqtrade.vendor.qtpylib.indicators import crossed_above
+from freqtrade.strategy.strategy import Strategy
+from user_data.hyperopt_conf import hyperopt_optimize_conf
 
 # Remove noisy log messages
 logging.getLogger('hyperopt.mongoexp').setLevel(logging.WARNING)
@@ -46,69 +45,12 @@ PROCESSED = None  # optimize.preprocess(optimize.load_data())
 OPTIMIZE_CONFIG = hyperopt_optimize_conf()
 
 # Hyperopt Trials
-TRIALS_FILE = 'hyperopt_trials.pickle'
+TRIALS_FILE = os.path.join('user_data', 'hyperopt_trials.pickle')
 TRIALS = Trials()
 
 # Monkey patch config
 from freqtrade import main  # noqa
 main._CONF = OPTIMIZE_CONFIG
-
-
-SPACE = {
-    'macd_below_zero': hp.choice('macd_below_zero', [
-        {'enabled': False},
-        {'enabled': True}
-    ]),
-    'mfi': hp.choice('mfi', [
-        {'enabled': False},
-        {'enabled': True, 'value': hp.quniform('mfi-value', 5, 25, 1)}
-    ]),
-    'fastd': hp.choice('fastd', [
-        {'enabled': False},
-        {'enabled': True, 'value': hp.quniform('fastd-value', 10, 50, 1)}
-    ]),
-    'adx': hp.choice('adx', [
-        {'enabled': False},
-        {'enabled': True, 'value': hp.quniform('adx-value', 15, 50, 1)}
-    ]),
-    'rsi': hp.choice('rsi', [
-        {'enabled': False},
-        {'enabled': True, 'value': hp.quniform('rsi-value', 20, 40, 1)}
-    ]),
-    'uptrend_long_ema': hp.choice('uptrend_long_ema', [
-        {'enabled': False},
-        {'enabled': True}
-    ]),
-    'uptrend_short_ema': hp.choice('uptrend_short_ema', [
-        {'enabled': False},
-        {'enabled': True}
-    ]),
-    'over_sar': hp.choice('over_sar', [
-        {'enabled': False},
-        {'enabled': True}
-    ]),
-    'green_candle': hp.choice('green_candle', [
-        {'enabled': False},
-        {'enabled': True}
-    ]),
-    'uptrend_sma': hp.choice('uptrend_sma', [
-        {'enabled': False},
-        {'enabled': True}
-    ]),
-    'trigger': hp.choice('trigger', [
-        {'type': 'lower_bb'},
-        {'type': 'lower_bb_tema'},
-        {'type': 'faststoch10'},
-        {'type': 'ao_cross_zero'},
-        {'type': 'ema3_cross_ema10'},
-        {'type': 'macd_cross_signal'},
-        {'type': 'sar_reversal'},
-        {'type': 'ht_sine'},
-        {'type': 'heiken_reversal_bull'},
-        {'type': 'di_cross'},
-    ]),
-    'stoploss': hp.uniform('stoploss', -0.5, -0.02),
-}
 
 
 def save_trials(trials, trials_path=TRIALS_FILE):
@@ -128,12 +70,12 @@ def read_trials(trials_path=TRIALS_FILE):
 def log_trials_result(trials):
     def arr_to_scalar(v):
         return v[0] if len(v) else 0
-
     try:
+        strategy = Strategy() 
         vals = trials.best_trial['misc']['vals']
         # Convert to format accepted by space_eval
         vals = {k: arr_to_scalar(v) for k, v in vals.items()}
-        best_parameters = space_eval(SPACE, vals)
+        best_parameters = space_eval(strategy.hyperopt_space(), vals)
         best_result = trials.best_trial['result']['result']
     except (ValueError, TypeError):
         best_parameters = {}
@@ -171,11 +113,14 @@ def optimizer(params):
     global _CURRENT_TRIES
 
     from freqtrade.optimize import backtesting
-    backtesting.populate_buy_trend = buy_strategy_generator(params)
+
+    strategy = Strategy()
+    backtesting.populate_buy_trend = strategy.buy_strategy_generator(params)
 
     results = backtest({'stake_amount': OPTIMIZE_CONFIG['stake_amount'],
                         'processed': PROCESSED,
-                        'stoploss': params['stoploss']})
+                        'stoploss': params['stoploss'],
+                        'strategy': params['strategy']})
     result_explanation = format_results(results)
 
     total_profit = results.profit_percent.sum()
@@ -218,58 +163,8 @@ def format_results(results: DataFrame):
             )
 
 
-def buy_strategy_generator(params):
-    def populate_buy_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
-        conditions = []
-        # GUARDS AND TRENDS
-        if params['uptrend_long_ema']['enabled']:
-            conditions.append(dataframe['ema50'] > dataframe['ema100'])
-        if params['macd_below_zero']['enabled']:
-            conditions.append(dataframe['macd'] < 0)
-        if params['uptrend_short_ema']['enabled']:
-            conditions.append(dataframe['ema5'] > dataframe['ema10'])
-        if params['mfi']['enabled']:
-            conditions.append(dataframe['mfi'] < params['mfi']['value'])
-        if params['fastd']['enabled']:
-            conditions.append(dataframe['fastd'] < params['fastd']['value'])
-        if params['adx']['enabled']:
-            conditions.append(dataframe['adx'] > params['adx']['value'])
-        if params['rsi']['enabled']:
-            conditions.append(dataframe['rsi'] < params['rsi']['value'])
-        if params['over_sar']['enabled']:
-            conditions.append(dataframe['close'] > dataframe['sar'])
-        if params['green_candle']['enabled']:
-            conditions.append(dataframe['close'] > dataframe['open'])
-        if params['uptrend_sma']['enabled']:
-            prevsma = dataframe['sma'].shift(1)
-            conditions.append(dataframe['sma'] > prevsma)
-
-        # TRIGGERS
-        triggers = {
-            'lower_bb': (dataframe['close'] < dataframe['bb_lowerband']),
-            'lower_bb_tema': (dataframe['tema'] < dataframe['bb_lowerband']),
-            'faststoch10': (crossed_above(dataframe['fastd'], 10.0)),
-            'ao_cross_zero': (crossed_above(dataframe['ao'], 0.0)),
-            'ema3_cross_ema10': (crossed_above(dataframe['ema3'], dataframe['ema10'])),
-            'macd_cross_signal': (crossed_above(dataframe['macd'], dataframe['macdsignal'])),
-            'sar_reversal': (crossed_above(dataframe['close'], dataframe['sar'])),
-            'ht_sine': (crossed_above(dataframe['htleadsine'], dataframe['htsine'])),
-            'heiken_reversal_bull': (crossed_above(dataframe['ha_close'], dataframe['ha_open'])) &
-                                    (dataframe['ha_low'] == dataframe['ha_open']),
-            'di_cross': (crossed_above(dataframe['plus_di'], dataframe['minus_di'])),
-        }
-        conditions.append(triggers.get(params['trigger']['type']))
-
-        dataframe.loc[
-            reduce(lambda x, y: x & y, conditions),
-            'buy'] = 1
-
-        return dataframe
-    return populate_buy_trend
-
-
 def start(args):
-    global TOTAL_TRIES, PROCESSED, SPACE, TRIALS, _CURRENT_TRIES
+    global TOTAL_TRIES, PROCESSED, TRIALS, _CURRENT_TRIES
 
     TOTAL_TRIES = args.epochs
 
@@ -285,10 +180,14 @@ def start(args):
     config = load_config(args.config)
     pairs = config['exchange']['pair_whitelist']
     logger.info('Test pairs: %s', pairs)
+
+    config.update({'strategy': args.strategy})
+    strategy = Strategy()
+    strategy.init(config)
+
     timerange = misc.parse_timerange(args.timerange)
     data = optimize.load_data(args.datadir, pairs=pairs,
                               ticker_interval=args.ticker_interval,
-                              strategy=args.strategy,
                               timerange=timerange)
     PROCESSED = optimize.tickerdata_to_dataframe(data, args.strategy)
 
@@ -314,7 +213,7 @@ def start(args):
     try:
         fmin(
             fn=optimizer,
-            space=SPACE,
+            space=strategy.hyperopt_space(),
             algo=tpe.suggest,
             max_evals=TOTAL_TRIES,
             trials=TRIALS

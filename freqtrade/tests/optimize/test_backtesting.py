@@ -10,7 +10,7 @@ from freqtrade.optimize import preprocess
 from freqtrade.optimize.backtesting import backtest, generate_text_table, get_timeframe
 import freqtrade.optimize.backtesting as backtesting
 
-TEST_STRATEGY = 'base'
+TEST_STRATEGY = 'default_strategy'
 
 
 def trim_dictlist(dl, num):
