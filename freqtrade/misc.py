@@ -15,7 +15,7 @@ from freqtrade import __version__
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_STRATEGY = 'default'
+DEFAULT_STRATEGY = 'default_strategy'
 
 
 def file_dump_json(filename, data):

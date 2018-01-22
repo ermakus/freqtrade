@@ -44,8 +44,7 @@ def populate_indicators(dataframe: DataFrame, strategy: str) -> DataFrame:
     you are using. Let uncomment only the indicator you are using in your strategies
     or your hyperopt configuration, otherwise you will waste your memory and CPU usage.
     """
-    strategy = Strategy()
-    return strategy.populate_indicators(dataframe=dataframe)
+    return Strategy(strategy).populate_indicators(dataframe=dataframe)
 
 
 def populate_buy_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
@@ -54,8 +53,7 @@ def populate_buy_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
     :param dataframe: DataFrame
     :return: DataFrame with buy column
     """
-    strategy = Strategy()
-    return strategy.populate_buy_trend(dataframe=dataframe)
+    return Strategy(strategy).populate_buy_trend(dataframe=dataframe)
 
 
 def populate_sell_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
@@ -64,8 +62,7 @@ def populate_sell_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
     :param dataframe: DataFrame
     :return: DataFrame with buy column
     """
-    strategy = Strategy()
-    return strategy.populate_sell_trend(dataframe=dataframe)
+    return Strategy(strategy).populate_sell_trend(dataframe=dataframe)
 
 
 def analyze_ticker(ticker_history: List[Dict], strategy: str) -> DataFrame:

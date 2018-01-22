@@ -16,7 +16,7 @@ from freqtrade.main import (_process, check_handle_timedout, create_trade,
 from freqtrade.misc import State, get_state
 from freqtrade.persistence import Trade
 
-TEST_STRATEGY = 'base'
+TEST_STRATEGY = 'default_strategy'
 
 
 # Test that main() can start backtesting or hyperopt.

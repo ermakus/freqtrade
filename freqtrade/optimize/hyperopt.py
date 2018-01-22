@@ -52,6 +52,7 @@ TRIALS = Trials()
 from freqtrade import main  # noqa
 main._CONF = OPTIMIZE_CONFIG
 
+STRATEGY = None
 
 def save_trials(trials, trials_path=TRIALS_FILE):
     """Save hyperopt trials to file"""
@@ -71,11 +72,10 @@ def log_trials_result(trials):
     def arr_to_scalar(v):
         return v[0] if len(v) else 0
     try:
-        strategy = Strategy() 
         vals = trials.best_trial['misc']['vals']
         # Convert to format accepted by space_eval
         vals = {k: arr_to_scalar(v) for k, v in vals.items()}
-        best_parameters = space_eval(strategy.hyperopt_space(), vals)
+        best_parameters = space_eval(STRATEGY.hyperopt_space(), vals)
         best_result = trials.best_trial['result']['result']
     except (ValueError, TypeError):
         best_parameters = {}
@@ -114,13 +114,12 @@ def optimizer(params):
 
     from freqtrade.optimize import backtesting
 
-    strategy = Strategy()
-    backtesting.populate_buy_trend = strategy.buy_strategy_generator(params)
+    backtesting.populate_buy_trend = STRATEGY.buy_strategy_generator(params)
 
     results = backtest({'stake_amount': OPTIMIZE_CONFIG['stake_amount'],
                         'processed': PROCESSED,
                         'stoploss': params['stoploss'],
-                        'strategy': params['strategy']})
+                        'strategy': STRATEGY.name})
     result_explanation = format_results(results)
 
     total_profit = results.profit_percent.sum()
@@ -164,7 +163,7 @@ def format_results(results: DataFrame):
 
 
 def start(args):
-    global TOTAL_TRIES, PROCESSED, TRIALS, _CURRENT_TRIES
+    global TOTAL_TRIES, PROCESSED, TRIALS, _CURRENT_TRIES, STRATEGY
 
     TOTAL_TRIES = args.epochs
 
@@ -181,9 +180,7 @@ def start(args):
     pairs = config['exchange']['pair_whitelist']
     logger.info('Test pairs: %s', pairs)
 
-    config.update({'strategy': args.strategy})
-    strategy = Strategy()
-    strategy.init(config)
+    STRATEGY = Strategy(args.strategy)
 
     timerange = misc.parse_timerange(args.timerange)
     data = optimize.load_data(args.datadir, pairs=pairs,
@@ -213,7 +210,7 @@ def start(args):
     try:
         fmin(
             fn=optimizer,
-            space=strategy.hyperopt_space(),
+            space=STRATEGY.hyperopt_space(),
             algo=tpe.suggest,
             max_evals=TOTAL_TRIES,
             trials=TRIALS

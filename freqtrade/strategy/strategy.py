@@ -12,14 +12,15 @@ sys.path.insert(0, r'../../user_data/strategies')
 
 
 class Strategy(object):
-    __instance = None
+    __instance = {}
 
     DEFAULT_STRATEGY = 'default_strategy'
 
-    def __new__(cls):
-        if Strategy.__instance is None:
-            Strategy.__instance = object.__new__(cls)
-        return Strategy.__instance
+    def __new__(cls, name):
+        if name not in Strategy.__instance:
+            Strategy.__instance[name] = object.__new__(cls)
+            Strategy.__instance[name].init({'strategy':name})
+        return Strategy.__instance[name]
 
     def init(self, config):
         self.logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class Strategy(object):
         else:
             strategy = self.DEFAULT_STRATEGY
 
+        self.name = strategy
         # Load the strategy
         self._load_strategy(strategy)
 

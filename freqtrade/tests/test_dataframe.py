@@ -5,7 +5,7 @@ from freqtrade import analyze
 
 _pairs = ['BTC_ETH']
 
-TEST_STRATEGY = 'base'
+TEST_STRATEGY = 'default_strategy'
 
 
 def load_dataframe_pair(pairs):

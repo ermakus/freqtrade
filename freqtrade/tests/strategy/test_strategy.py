@@ -4,6 +4,8 @@ import pytest
 from freqtrade.strategy.strategy import Strategy
 from freqtrade.analyze import parse_ticker_dataframe
 
+TEST_STRATEGY='default_strategy'
+
 
 @pytest.fixture
 def result():
@@ -38,11 +40,8 @@ def test_strategy_structure():
 
 
 def test_load_strategy(result):
-    strategy = Strategy()
+    strategy = Strategy(TEST_STRATEGY)
     strategy.logger = logging.getLogger(__name__)
-
-    assert not hasattr(Strategy, 'custom_strategy')
-    strategy._load_strategy('default_strategy')
 
     assert not hasattr(Strategy, 'custom_strategy')
 
@@ -51,8 +50,7 @@ def test_load_strategy(result):
 
 
 def test_strategy(result):
-    strategy = Strategy()
-    strategy.init({'strategy': 'default_strategy'})
+    strategy = Strategy(TEST_STRATEGY)
 
     assert hasattr(strategy.custom_strategy, 'minimal_roi')
     assert strategy.minimal_roi['0'] == 0.04
@@ -85,7 +83,7 @@ def test_strategy_override_minimal_roi(caplog):
             "0": 0.5
         }
     }
-    strategy = Strategy()
+    strategy = Strategy(TEST_STRATEGY)
     strategy.init(config)
 
     assert hasattr(strategy.custom_strategy, 'minimal_roi')
@@ -101,7 +99,7 @@ def test_strategy_override_stoploss(caplog):
         'strategy': 'default_strategy',
         'stoploss': -0.5
     }
-    strategy = Strategy()
+    strategy = Strategy(TEST_STRATEGY)
     strategy.init(config)
 
     assert hasattr(strategy.custom_strategy, 'stoploss')
@@ -113,21 +111,18 @@ def test_strategy_override_stoploss(caplog):
 
 
 def test_strategy_fallback_default_strategy():
-    strategy = Strategy()
+    strategy = Strategy(TEST_STRATEGY)
     strategy.logger = logging.getLogger(__name__)
-
-    assert not hasattr(Strategy, 'custom_strategy')
     strategy._load_strategy('../../super_duper')
     assert not hasattr(Strategy, 'custom_strategy')
 
 
 def test_strategy_singleton():
-    strategy1 = Strategy()
-    strategy1.init({'strategy': 'default_strategy'})
+    strategy1 = Strategy(TEST_STRATEGY)
 
     assert hasattr(strategy1.custom_strategy, 'minimal_roi')
     assert strategy1.minimal_roi['0'] == 0.04
 
-    strategy2 = Strategy()
+    strategy2 = Strategy(TEST_STRATEGY)
     assert hasattr(strategy2.custom_strategy, 'minimal_roi')
     assert strategy2.minimal_roi['0'] == 0.04

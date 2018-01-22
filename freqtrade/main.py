@@ -232,12 +232,12 @@ def execute_sell(trade: Trade, limit: float) -> None:
     Trade.session.flush()
 
 
-def min_roi_reached(trade: Trade, current_rate: float, current_time: datetime) -> bool:
+def min_roi_reached(trade: Trade, current_rate: float, current_time: datetime, strategy: str) -> bool:
     """
     Based an earlier trade and current price and ROI configuration, decides whether bot should sell
     :return True if bot should sell at current rate
     """
-    strategy = Strategy()
+    strategy = Strategy(strategy)
 
     current_profit = trade.calc_profit_percent(current_rate)
     if strategy.stoploss is not None and current_profit < float(strategy.stoploss):
@@ -271,7 +271,7 @@ def handle_trade(trade: Trade, strategy: str) -> bool:
         (buy, sell) = get_signal(trade.pair, strategy)
 
     # Check if minimal roi has been reached and no longer in buy conditions (avoiding a fee)
-    if not buy and min_roi_reached(trade, current_rate, datetime.utcnow()):
+    if not buy and min_roi_reached(trade, current_rate, datetime.utcnow(), strategy):
         logger.debug('Executing sell due to ROI ...')
         execute_sell(trade, current_rate)
         return True
@@ -394,9 +394,6 @@ def init(config: dict, db_url: Optional[str] = None) -> None:
     rpc.init(config)
     persistence.init(config, db_url)
     exchange.init(config)
-
-    strategy = Strategy()
-    strategy.init(config)
 
     # Set initial application state
     initial_state = config.get('initial_state')
