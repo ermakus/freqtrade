@@ -119,15 +119,6 @@ class TestStrategy(IStrategy):
         # Overlap Studies
         # ------------------------------------
 
-        """
-        # Previous Bollinger bands
-        # Because ta.BBANDS implementation is broken with small numbers, it actually
-        # returns middle band for all the three bands. Switch to qtpylib.bollinger_bands
-        # and use middle band instead.
-
-        dataframe['blower'] = ta.BBANDS(dataframe, nbdevup=2, nbdevdn=2)['lowerband']
-        """
-
         # Bollinger bands
         bollinger = qtpylib.bollinger_bands(qtpylib.typical_price(dataframe), window=20, stds=2)
         dataframe['bb_lowerband'] = bollinger['lower']
@@ -232,7 +223,7 @@ class TestStrategy(IStrategy):
         dataframe.loc[
             (
                 (dataframe['adx'] > 30) &
-                (dataframe['tema'] <= dataframe['blower']) &
+                (dataframe['tema'] <= dataframe['bb_middleband']) &
                 (dataframe['tema'] > dataframe['tema'].shift(1))
             ),
             'buy'] = 1
@@ -248,7 +239,7 @@ class TestStrategy(IStrategy):
         dataframe.loc[
             (
                 (dataframe['adx'] > 70) &
-                (dataframe['tema'] > dataframe['blower']) &
+                (dataframe['tema'] > dataframe['bb_middleband']) &
                 (dataframe['tema'] < dataframe['tema'].shift(1))
             ),
             'sell'] = 1
