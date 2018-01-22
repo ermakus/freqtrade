@@ -114,7 +114,7 @@ def optimizer(params):
 
     from freqtrade.optimize import backtesting
 
-    backtesting.populate_buy_trend = STRATEGY.buy_strategy_generator(params)
+    backtesting.populate_buy_trend = lambda dataframe, strategy: STRATEGY.buy_strategy_generator(params)(dataframe)
 
     results = backtest({'stake_amount': OPTIMIZE_CONFIG['stake_amount'],
                         'processed': PROCESSED,

@@ -1,4 +1,4 @@
-STRATEGY=${1:-default}
+STRATEGY=${1:-default_strategy}
 shift
 echo "Run strategy: $STRATEGY"
 ./bin/trade -s $STRATEGY --dynamic-whitelist --dry-run-db -w $*
