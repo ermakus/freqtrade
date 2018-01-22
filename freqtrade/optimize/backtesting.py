@@ -67,6 +67,28 @@ def generate_text_table(
     return tabulate(tabular_data, headers=headers, floatfmt=floatfmt)
 
 
+def liquidate(active_trades, last_price, trades_count):
+    trades = []
+    for trade in active_trades:
+        price = last_price[trade.pair]
+        count = trades_count[trade.pair]
+        profit_btc = trade.calc_profit(price)
+        profit_percent = trade.calc_profit_percent(price)
+        logger.debug("Pair: {} Liquidate profit: {} Duration: {}".format(
+                    trade.pair, profit_btc, count - trade.id))
+        trades.append(
+            (
+                trade.pair,
+                profit_percent,
+                profit_btc,
+                count - trade.id,
+                profit_btc > 0,
+                profit_btc < 0
+            )
+        )
+    return trades
+
+
 def backtest(stake_amount: float, processed: Dict[str, DataFrame],
              max_open_trades: int = 0, realistic: bool = True, sell_profit_only: bool = False,
              stoploss: int = -1.00, use_sell_signal: bool = False,
@@ -80,6 +102,9 @@ def backtest(stake_amount: float, processed: Dict[str, DataFrame],
     :return: DataFrame
     """
     trades = []
+    active_trades = []
+    trades_count = {}
+    last_price = {}
     trade_count_lock: dict = {}
     exchange._API = Bittrex({'key': '', 'secret': ''})
     for pair, pair_data in processed.items():
@@ -87,6 +112,7 @@ def backtest(stake_amount: float, processed: Dict[str, DataFrame],
         ticker = populate_sell_trend(populate_buy_trend(pair_data, strategy=strategy),
                                      strategy=strategy)
         # for each buy point
+        trades_count[pair] = len(ticker.index)
         lock_pair_until = None
         buy_subset = ticker[ticker.buy == 1][['buy', 'open', 'close', 'date', 'sell']]
         for row in buy_subset.itertuples(index=True):
@@ -97,12 +123,14 @@ def backtest(stake_amount: float, processed: Dict[str, DataFrame],
                 # Check if max_open_trades has already been reached for the given date
                 if not trade_count_lock.get(row.date, 0) < max_open_trades:
                     continue
-
-            if max_open_trades > 0:
                 # Increase lock
                 trade_count_lock[row.date] = trade_count_lock.get(row.date, 0) + 1
 
+            last_price[pair] = ticker['close'].iloc[-1]
+
             trade = Trade(
+                id=row.Index,
+                pair=pair,
                 open_rate=row.close,
                 open_date=row.date,
                 stake_amount=stake_amount,
@@ -112,7 +140,11 @@ def backtest(stake_amount: float, processed: Dict[str, DataFrame],
 
             # calculate win/lose forwards from buy point
             sell_subset = ticker[row.Index + 1:][['close', 'date', 'sell']]
+            active_trades.append(trade)
             for row2 in sell_subset.itertuples(index=True):
+
+                lock_pair_until = row2.Index
+
                 if max_open_trades > 0:
                     # Increase trade_count_lock for every iteration
                     trade_count_lock[row2.date] = trade_count_lock.get(row2.date, 0) + 1
@@ -124,8 +156,7 @@ def backtest(stake_amount: float, processed: Dict[str, DataFrame],
                     (row2.sell == 1 and use_sell_signal) or \
                         current_profit_percent <= stoploss:
                     current_profit_btc = trade.calc_profit(rate=row2.close)
-                    lock_pair_until = row2.Index
-
+                    active_trades.remove(trade)
                     trades.append(
                         (
                             pair,
@@ -137,6 +168,10 @@ def backtest(stake_amount: float, processed: Dict[str, DataFrame],
                         )
                     )
                     break
+
+    if realistic:
+        trades += liquidate(active_trades, last_price, trades_count)
+
     labels = ['currency', 'profit_percent', 'profit_BTC', 'duration', 'profit', 'loss']
     return DataFrame.from_records(trades, columns=labels)
 
