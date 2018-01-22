@@ -29,8 +29,9 @@ def parse_ticker_dataframe(ticker: list) -> DataFrame:
     """
     columns = {'C': 'close', 'V': 'volume', 'O': 'open', 'H': 'high', 'L': 'low', 'T': 'date'}
     frame = DataFrame(ticker) \
-        .drop('BV', 1) \
         .rename(columns=columns)
+    if 'BV' in frame:
+        frame.drop('BV', 1, inplace=True)
     frame['date'] = to_datetime(frame['date'], utc=True, infer_datetime_format=True)
     frame.sort_values('date', inplace=True)
     return frame
@@ -78,14 +79,13 @@ def analyze_ticker(ticker_history: List[Dict], strategy: str) -> DataFrame:
     return dataframe
 
 
-def get_signal(pair: str, strategy: str, 
-               tick_interval: Optional[int] = 5) -> (bool, bool):
+def get_signal(pair: str, strategy: str, interval: int) -> (bool, bool):
     """
     Calculates current signal based several technical analysis indicators
     :param pair: pair in format BTC_ANT or BTC-ANT
     :return: (True, False) if pair is good for buying and not for selling
     """
-    ticker_hist = get_ticker_history(pair, tick_interval)
+    ticker_hist = get_ticker_history(pair, interval)
     if not ticker_hist:
         logger.warning('Empty ticker history for pair %s', pair)
         return (False, False)
