@@ -14,7 +14,7 @@ from freqtrade.analyze import populate_buy_trend, populate_sell_trend
 from freqtrade.exchange import Bittrex
 from freqtrade.main import min_roi_reached
 from freqtrade.persistence import Trade
-from freqtrade.strategy.strategy import Strategy
+
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +81,10 @@ def get_trade_entry(pair, row, ticker, trade_count_lock, args, active_trades):
                   amount=stake_amount / row.open,
                   fee=exchange.get_fee()
                   )
-    active_trades.append( trade )
+    active_trades.append(trade)
     # calculate win/lose forwards from buy point
     sell_subset = ticker[row.Index + 1:][['close', 'date', 'sell']]
+    row2 = None
     for row2 in sell_subset.itertuples(index=True):
         if max_open_trades > 0:
             # Increase trade_count_lock for every iteration
@@ -105,6 +106,7 @@ def get_trade_entry(pair, row, ticker, trade_count_lock, args, active_trades):
                           current_profit_btc < 0
                           )
     return row2, None
+
 
 def liquidate(active_trades, last_price, trades_count):
     trades = []
@@ -173,10 +175,9 @@ def backtest(args) -> DataFrame:
                 # Increase lock
                 trade_count_lock[row.date] = trade_count_lock.get(row.date, 0) + 1
 
-            ret = get_trade_entry(pair, row, ticker,
-                                  trade_count_lock, args, active_trades)
-            if ret:
-                row2, trade_entry = ret
+            row2, trade_entry = get_trade_entry(pair, row, ticker, trade_count_lock,
+                                                args, active_trades)
+            if row2:
                 lock_pair_until = row2.Index
                 if trade_entry:
                     trades.append(trade_entry)

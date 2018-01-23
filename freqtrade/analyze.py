@@ -4,8 +4,7 @@ Functions to analyze ticker data with indicators and produce buy and sell signal
 import logging
 from datetime import timedelta
 from enum import Enum
-from typing import Dict, List, Optional
-from importlib import import_module
+from typing import Dict, List
 import arrow
 from pandas import DataFrame, to_datetime
 

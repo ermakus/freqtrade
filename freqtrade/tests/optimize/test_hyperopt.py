@@ -3,6 +3,9 @@ from freqtrade.optimize.hyperopt import calculate_loss, TARGET_TRADES, EXPECTED_
     log_results, save_trials, read_trials
 
 
+TEST_STRATEGY = 'default_strategy'
+
+
 def test_loss_calculation_prefer_correct_trade_count():
     correct = calculate_loss(1, TARGET_TRADES, 20)
     over = calculate_loss(1, TARGET_TRADES + 100, 20)
@@ -64,7 +67,7 @@ def test_start_calls_fmin(mocker):
     mock_fmin = mocker.patch('freqtrade.optimize.hyperopt.fmin', return_value={})
 
     args = mocker.Mock(epochs=1, config='config.json.example', mongodb=False,
-                       save_trials=False, timerange=None)
+                       save_trials=False, timerange=None, strategy=TEST_STRATEGY)
     start(args)
 
     mock_fmin.assert_called_once()
@@ -78,7 +81,7 @@ def test_start_uses_mongotrials(mocker):
     mocker.patch('freqtrade.optimize.hyperopt.fmin', return_value={})
 
     args = mocker.Mock(epochs=1, config='config.json.example', mongodb=True,
-                       save_trials=False, timerange=None)
+                       save_trials=False, timerange=None, strategy=TEST_STRATEGY)
     start(args)
 
     mock_mongotrials.assert_called_once()
@@ -159,7 +162,7 @@ def test_fmin_throw_value_error(mocker, caplog):
     mocker.patch('freqtrade.optimize.hyperopt.fmin', side_effect=ValueError())
 
     args = mocker.Mock(epochs=1, config='config.json.example',
-                       save_trials=False, timerange=None)
+                       save_trials=False, timerange=None, strategy=TEST_STRATEGY)
     start(args)
 
     exists = [
@@ -194,7 +197,8 @@ def test_resuming_previous_hyperopt_results_succeeds(mocker):
     args = mocker.Mock(epochs=1,
                        config='config.json.example',
                        mongodb=False,
-                       timerange=None)
+                       timerange=None,
+                       strategy=TEST_STRATEGY)
 
     start(args)
 

@@ -12,6 +12,7 @@ from freqtrade.optimize.__init__ import make_testdata_path, download_pairs,\
 _btc_unittest_length = 13681
 TEST_STRATEGY = 'default_strategy'
 
+
 def _backup_file(file: str, copy_file: bool = False) -> None:
     """
     Backup existing file to avoid deleting the user file

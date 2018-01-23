@@ -8,7 +8,7 @@ matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt  # noqa
 
 
-def plot_parse_args(args ):
+def plot_parse_args(args):
     parser = common_args_parser(description='Graph utility')
     parser.add_argument(
         '-p', '--pair',
@@ -19,10 +19,10 @@ def plot_parse_args(args ):
     )
     parser.add_argument(
         '-i', '--interval',
-        help = 'what interval to use',
-        dest = 'interval',
-        default = '5',
-        type = int,
+        help='what interval to use',
+        dest='interval',
+        default='5',
+        type=int,
     )
     return parser.parse_args(args)
 
@@ -36,8 +36,8 @@ def plot_analyzed_dataframe(args):
 
     # Init Bittrex to use public API
     exchange._API = exchange.Bittrex({'key': '', 'secret': ''})
-    ticker = exchange.get_ticker_history(args.pair,args.interval)
-    dataframe = analyze.analyze_ticker(ticker,args.strategy)
+    ticker = exchange.get_ticker_history(args.pair, args.interval)
+    dataframe = analyze.analyze_ticker(ticker, args.strategy)
 
     dataframe.loc[dataframe['buy'] == 1, 'buy_price'] = dataframe['close']
     dataframe.loc[dataframe['sell'] == 1, 'sell_price'] = dataframe['close']

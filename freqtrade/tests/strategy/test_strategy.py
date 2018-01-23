@@ -4,7 +4,7 @@ import pytest
 from freqtrade.strategy.strategy import Strategy
 from freqtrade.analyze import parse_ticker_dataframe
 
-TEST_STRATEGY='default_strategy'
+TEST_STRATEGY = 'default_strategy'
 
 
 @pytest.fixture
@@ -110,11 +110,9 @@ def test_strategy_override_stoploss(caplog):
             ) in caplog.record_tuples
 
 
-def test_strategy_fallback_default_strategy():
-    strategy = Strategy(TEST_STRATEGY)
-    strategy.logger = logging.getLogger(__name__)
-    strategy._load_strategy('../../super_duper')
-    assert not hasattr(Strategy, 'custom_strategy')
+def test_strategy_invalid_name():
+    with pytest.raises(ImportError):
+        Strategy('BAD_STRATEGY')
 
 
 def test_strategy_singleton():

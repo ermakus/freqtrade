@@ -57,7 +57,8 @@ def refresh_whitelist(whitelist: List[str]) -> List[str]:
     return final_list
 
 
-def _process(interval: int, nb_assets: Optional[int] = 0, strategy: Optional[str] = DEFAULT_STRATEGY) -> bool:
+def _process(interval: int, nb_assets: Optional[int] = 0,
+             strategy: Optional[str] = DEFAULT_STRATEGY) -> bool:
     """
     Queries the persistence layer for open trades and handles them,
     otherwise a new trade is created.
@@ -232,7 +233,8 @@ def execute_sell(trade: Trade, limit: float) -> None:
     Trade.session.flush()
 
 
-def min_roi_reached(trade: Trade, current_rate: float, current_time: datetime, strategy: str) -> bool:
+def min_roi_reached(trade: Trade, current_rate: float,
+                    current_time: datetime, strategy: str) -> bool:
     """
     Based an earlier trade and current price and ROI configuration, decides whether bot should sell
     :return True if bot should sell at current rate

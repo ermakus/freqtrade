@@ -11,13 +11,12 @@ import talib.abstract as ta
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 import numpy # noqa
 
-
 # Update this variable if you change the class name
-class_name = 'TestStrategy'
+class_name = 'BaseStrategy'
 
 
 # This class is a sample. Feel free to customize it.
-class TestStrategy(IStrategy):
+class BaseStrategy(IStrategy):
     """
     This is a test strategy to inspire you.
     More information in https://github.com/gcarq/freqtrade/blob/develop/docs/bot-optimization.md
@@ -36,15 +35,16 @@ class TestStrategy(IStrategy):
     # Minimal ROI designed for the strategy.
     # This attribute will be overridden if the config file contains "minimal_roi"
     minimal_roi = {
-        "40": 0.0,
-        "30": 0.01,
-        "20": 0.02,
-        "0": 0.04
+        "120": 0.01,
+        "60":  0.02,
+        "30":  0.03,
+        "20":  0.04,
+        "0":   0.05
     }
 
     # Optimal stoploss designed for the strategy
     # This attribute will be overridden if the config file contains "stoploss"
-    stoploss = -0.10
+    stoploss = -0.9
 
     def populate_indicators(self, dataframe: DataFrame) -> DataFrame:
         """
@@ -61,13 +61,12 @@ class TestStrategy(IStrategy):
         # ADX
         dataframe['adx'] = ta.ADX(dataframe)
 
-        """
         # Awesome oscillator
         dataframe['ao'] = qtpylib.awesome_oscillator(dataframe)
-
+        """
         # Commodity Channel Index: values Oversold:<-100, Overbought:>100
         dataframe['cci'] = ta.CCI(dataframe)
-
+        """
         # MACD
         macd = ta.MACD(dataframe)
         dataframe['macd'] = macd['macd']
@@ -86,29 +85,42 @@ class TestStrategy(IStrategy):
         dataframe['plus_di'] = ta.PLUS_DI(dataframe)
         dataframe['minus_di'] = ta.MINUS_DI(dataframe)
 
+        dataframe['fastminus_dm'] = ta.MINUS_DM(dataframe, timeperiod=1)
+        dataframe['longminus_dm'] = ta.MINUS_DM(dataframe, timeperiod=60)
+        dataframe['longlongminus_dm'] = ta.MINUS_DM(dataframe, timeperiod=200)
+
+        # Plus Directional Indicator / Movement
+        dataframe['fastplus_dm'] = ta.PLUS_DM(dataframe, timeperiod=1)
+        dataframe['longplus_dm'] = ta.PLUS_DM(dataframe, timeperiod=60)
+        dataframe['longlongplus_dm'] = ta.PLUS_DM(dataframe, timeperiod=200)
+
+        dataframe['direction'] = dataframe['plus_dm'] - dataframe['minus_dm']
+        dataframe['fastdirection'] = dataframe['fastplus_dm'] - dataframe['fastminus_dm']
+        dataframe['longdirection'] = dataframe['longplus_dm'] - dataframe['longminus_dm']
+        dataframe['longlongdirection'] = dataframe['longlongplus_dm'] - dataframe['longlongminus_dm']  # noqa
+
+        """
         # ROC
         dataframe['roc'] = ta.ROC(dataframe)
-
+        """
         # RSI
         dataframe['rsi'] = ta.RSI(dataframe)
-
+        """
         # Inverse Fisher transform on RSI, values [-1.0, 1.0] (https://goo.gl/2JGGoy)
         rsi = 0.1 * (dataframe['rsi'] - 50)
         dataframe['fisher_rsi'] = (numpy.exp(2 * rsi) - 1) / (numpy.exp(2 * rsi) + 1)
-
         # Inverse Fisher transform on RSI normalized, value [0.0, 100.0] (https://goo.gl/2JGGoy)
         dataframe['fisher_rsi_norma'] = 50 * (dataframe['fisher_rsi'] + 1)
-
         # Stoch
         stoch = ta.STOCH(dataframe)
         dataframe['slowd'] = stoch['slowd']
         dataframe['slowk'] = stoch['slowk']
-
+        """
         # Stoch fast
         stoch_fast = ta.STOCHF(dataframe)
         dataframe['fastd'] = stoch_fast['fastd']
         dataframe['fastk'] = stoch_fast['fastk']
-
+        """
         # Stoch RSI
         stoch_rsi = ta.STOCHRSI(dataframe)
         dataframe['fastd_rsi'] = stoch_rsi['fastd']
@@ -118,26 +130,31 @@ class TestStrategy(IStrategy):
         # Overlap Studies
         # ------------------------------------
 
+        # Previous Bollinger bands
+        # Because ta.BBANDS implementation is broken with small numbers, it actually
+        # returns middle band for all the three bands. Switch to qtpylib.bollinger_bands
+        # and use middle band instead.
+        dataframe['blower'] = ta.BBANDS(dataframe, nbdevup=2, nbdevdn=2)['lowerband']
+
         # Bollinger bands
         bollinger = qtpylib.bollinger_bands(qtpylib.typical_price(dataframe), window=20, stds=2)
         dataframe['bb_lowerband'] = bollinger['lower']
         dataframe['bb_middleband'] = bollinger['mid']
         dataframe['bb_upperband'] = bollinger['upper']
 
-        """
         # EMA - Exponential Moving Average
         dataframe['ema3'] = ta.EMA(dataframe, timeperiod=3)
         dataframe['ema5'] = ta.EMA(dataframe, timeperiod=5)
         dataframe['ema10'] = ta.EMA(dataframe, timeperiod=10)
         dataframe['ema50'] = ta.EMA(dataframe, timeperiod=50)
         dataframe['ema100'] = ta.EMA(dataframe, timeperiod=100)
+        dataframe['ema150'] = ta.EMA(dataframe, timeperiod=150)
 
         # SAR Parabol
         dataframe['sar'] = ta.SAR(dataframe)
 
         # SMA - Simple Moving Average
         dataframe['sma'] = ta.SMA(dataframe, timeperiod=40)
-        """
 
         # TEMA - Triple Exponential Moving Average
         dataframe['tema'] = ta.TEMA(dataframe, timeperiod=9)
@@ -202,14 +219,12 @@ class TestStrategy(IStrategy):
 
         # Chart type
         # ------------------------------------
-        """
         # Heikinashi stategy
         heikinashi = qtpylib.heikinashi(dataframe)
         dataframe['ha_open'] = heikinashi['open']
         dataframe['ha_close'] = heikinashi['close']
         dataframe['ha_high'] = heikinashi['high']
         dataframe['ha_low'] = heikinashi['low']
-        """
 
         return dataframe
 
@@ -219,14 +234,7 @@ class TestStrategy(IStrategy):
         :param dataframe: DataFrame
         :return: DataFrame with buy column
         """
-        dataframe.loc[
-            (
-                (dataframe['adx'] > 30) &
-                (dataframe['tema'] <= dataframe['bb_middleband']) &
-                (dataframe['tema'] > dataframe['tema'].shift(1))
-            ),
-            'buy'] = 1
-
+        dataframe['buy'] = 0
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame) -> DataFrame:
@@ -235,13 +243,7 @@ class TestStrategy(IStrategy):
         :param dataframe: DataFrame
         :return: DataFrame with buy column
         """
-        dataframe.loc[
-            (
-                (dataframe['adx'] > 70) &
-                (dataframe['tema'] > dataframe['bb_middleband']) &
-                (dataframe['tema'] < dataframe['tema'].shift(1))
-            ),
-            'sell'] = 1
+        dataframe['sell'] = 0
         return dataframe
 
     def hyperopt_space(self) -> List[Dict]:

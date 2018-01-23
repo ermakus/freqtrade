@@ -6,8 +6,7 @@ import pickle
 import signal
 import os
 from math import exp
-from operator import itemgetter
-from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, hp, space_eval, tpe
+from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, space_eval, tpe
 from hyperopt.mongoexp import MongoTrials
 from pandas import DataFrame
 
@@ -45,7 +44,7 @@ PROCESSED = None  # optimize.preprocess(optimize.load_data())
 OPTIMIZE_CONFIG = hyperopt_optimize_conf()
 
 # Hyperopt Trials
-TRIALS_FILE = os.path.join('user_data', 'hyperopt_trials.pickle')
+TRIALS_FILE = os.path.join('user_data', 'data', 'hyperopt_trials.pickle')
 TRIALS = Trials()
 
 # Monkey patch config
@@ -53,6 +52,7 @@ from freqtrade import main  # noqa
 main._CONF = OPTIMIZE_CONFIG
 
 STRATEGY = None
+
 
 def save_trials(trials, trials_path=TRIALS_FILE):
     """Save hyperopt trials to file"""
@@ -114,7 +114,10 @@ def optimizer(params):
 
     from freqtrade.optimize import backtesting
 
-    backtesting.populate_buy_trend = lambda dataframe, strategy: STRATEGY.buy_strategy_generator(params)(dataframe)
+    def buy_trend(dataframe, strategy):
+        return STRATEGY.buy_strategy_generator(params)(dataframe)
+
+    backtesting.populate_buy_trend = buy_trend
 
     results = backtest({'stake_amount': OPTIMIZE_CONFIG['stake_amount'],
                         'processed': PROCESSED,

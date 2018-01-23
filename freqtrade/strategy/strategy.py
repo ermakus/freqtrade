@@ -19,7 +19,7 @@ class Strategy(object):
     def __new__(cls, name):
         if name not in Strategy.__instance:
             Strategy.__instance[name] = object.__new__(cls)
-            Strategy.__instance[name].init({'strategy':name})
+            Strategy.__instance[name].init({'strategy': name})
         return Strategy.__instance[name]
 
     def init(self, config):
@@ -66,9 +66,8 @@ class Strategy(object):
             # Load the strategy
             self.custom_strategy = self._load_class(path + strategy_name)
 
-        # Fallback to the default strategy
         except (ImportError, TypeError):
-            self.custom_strategy = self._load_class('.' + self.DEFAULT_STRATEGY)
+            raise ImportError("Invalid strategy name: {}".format(strategy_name))
 
     def _load_class(self, filename: str) -> IStrategy:
         """

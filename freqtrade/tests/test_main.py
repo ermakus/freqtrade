@@ -206,7 +206,8 @@ def test_create_trade_no_stake_amount(default_conf, ticker, mocker):
                           buy=MagicMock(return_value='mocked_limit_buy'),
                           get_balance=MagicMock(return_value=default_conf['stake_amount'] * 0.5))
     with pytest.raises(DependencyException, match=r'.*stake amount.*'):
-        create_trade(default_conf['stake_amount'], TEST_STRATEGY, int(default_conf['ticker_interval']))
+        create_trade(default_conf['stake_amount'], TEST_STRATEGY,
+                     int(default_conf['ticker_interval']))
 
 
 def test_create_trade_no_pairs(default_conf, ticker, mocker):
@@ -222,7 +223,8 @@ def test_create_trade_no_pairs(default_conf, ticker, mocker):
         conf = copy.deepcopy(default_conf)
         conf['exchange']['pair_whitelist'] = []
         mocker.patch.dict('freqtrade.main._CONF', conf)
-        create_trade(default_conf['stake_amount'], TEST_STRATEGY, int(default_conf['ticker_interval']))
+        create_trade(default_conf['stake_amount'], TEST_STRATEGY,
+                     int(default_conf['ticker_interval']))
 
 
 def test_create_trade_no_pairs_after_blacklist(default_conf, ticker, mocker):
@@ -239,7 +241,8 @@ def test_create_trade_no_pairs_after_blacklist(default_conf, ticker, mocker):
         conf['exchange']['pair_whitelist'] = ["BTC_ETH"]
         conf['exchange']['pair_blacklist'] = ["BTC_ETH"]
         mocker.patch.dict('freqtrade.main._CONF', conf)
-        create_trade(default_conf['stake_amount'], TEST_STRATEGY, int(default_conf['ticker_interval']))
+        create_trade(default_conf['stake_amount'], TEST_STRATEGY,
+                     int(default_conf['ticker_interval']))
 
 
 def test_handle_trade(default_conf, limit_buy_order, limit_sell_order, mocker):
