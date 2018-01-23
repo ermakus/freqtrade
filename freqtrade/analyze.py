@@ -36,55 +36,26 @@ def parse_ticker_dataframe(ticker: list) -> DataFrame:
     return frame
 
 
-def populate_indicators(dataframe: DataFrame, strategy: str) -> DataFrame:
-    """
-    Adds several different TA indicators to the given DataFrame
-
-    Performance Note: For the best performance be frugal on the number of indicators
-    you are using. Let uncomment only the indicator you are using in your strategies
-    or your hyperopt configuration, otherwise you will waste your memory and CPU usage.
-    """
-    return Strategy(strategy).populate_indicators(dataframe=dataframe)
-
-
-def populate_buy_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
-    """
-    Based on TA indicators, populates the buy signal for the given dataframe
-    :param dataframe: DataFrame
-    :return: DataFrame with buy column
-    """
-    return Strategy(strategy).populate_buy_trend(dataframe=dataframe)
-
-
-def populate_sell_trend(dataframe: DataFrame, strategy: str) -> DataFrame:
-    """
-    Based on TA indicators, populates the sell signal for the given dataframe
-    :param dataframe: DataFrame
-    :return: DataFrame with buy column
-    """
-    return Strategy(strategy).populate_sell_trend(dataframe=dataframe)
-
-
-def analyze_ticker(ticker_history: List[Dict], strategy: str) -> DataFrame:
+def analyze_ticker(ticker_history: List[Dict], strategy: Strategy) -> DataFrame:
     """
     Parses the given ticker history and returns a populated DataFrame
     add several TA indicators and buy signal to it
     :return DataFrame with ticker data and indicator data
     """
     dataframe = parse_ticker_dataframe(ticker_history)
-    dataframe = populate_indicators(dataframe, strategy)
-    dataframe = populate_buy_trend(dataframe, strategy)
-    dataframe = populate_sell_trend(dataframe, strategy)
+    dataframe = strategy.populate_indicators(dataframe)
+    dataframe = strategy.populate_buy_trend(dataframe)
+    dataframe = strategy.populate_sell_trend(dataframe)
     return dataframe
 
 
-def get_signal(pair: str, strategy: str, interval: int) -> (bool, bool):
+def get_signal(pair: str, strategy: Strategy) -> (bool, bool):
     """
     Calculates current signal based several technical analysis indicators
     :param pair: pair in format BTC_ANT or BTC-ANT
     :return: (True, False) if pair is good for buying and not for selling
     """
-    ticker_hist = get_ticker_history(pair, interval)
+    ticker_hist = get_ticker_history(pair, strategy.ticker_interval)
     if not ticker_hist:
         logger.warning('Empty ticker history for pair %s', pair)
         return (False, False)

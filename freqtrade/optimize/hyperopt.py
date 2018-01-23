@@ -122,7 +122,7 @@ def optimizer(params):
     results = backtest({'stake_amount': OPTIMIZE_CONFIG['stake_amount'],
                         'processed': PROCESSED,
                         'stoploss': params['stoploss'],
-                        'strategy': STRATEGY.name})
+                        'strategy': STRATEGY})
     result_explanation = format_results(results)
 
     total_profit = results.profit_percent.sum()
@@ -183,13 +183,14 @@ def start(args):
     pairs = config['exchange']['pair_whitelist']
     logger.info('Test pairs: %s', pairs)
 
-    STRATEGY = Strategy(args.strategy)
+    config.update({'strategy': args.strategy})
+    STRATEGY = Strategy(config)
 
     timerange = misc.parse_timerange(args.timerange)
     data = optimize.load_data(args.datadir, pairs=pairs,
                               ticker_interval=args.ticker_interval,
                               timerange=timerange)
-    PROCESSED = optimize.tickerdata_to_dataframe(data, args.strategy)
+    PROCESSED = optimize.tickerdata_to_dataframe(data, STRATEGY)
 
     if args.mongodb:
         logger.info('Using mongodb ...')

@@ -12,15 +12,11 @@ sys.path.insert(0, r'../../user_data/strategies')
 
 
 class Strategy(object):
-    __instance = {}
 
     DEFAULT_STRATEGY = 'default_strategy'
 
-    def __new__(cls, name):
-        if name not in Strategy.__instance:
-            Strategy.__instance[name] = object.__new__(cls)
-            Strategy.__instance[name].init({'strategy': name})
-        return Strategy.__instance[name]
+    def __init__(self, config):
+        self.init(config)
 
     def init(self, config):
         self.logger = logging.getLogger(__name__)
@@ -45,8 +41,13 @@ class Strategy(object):
             self.custom_strategy.stoploss = config['stoploss']
             self.logger.info("Override strategy \'stoploss\' with value in config file.")
 
+        if 'ticker_interval' in config:
+            self.custom_strategy.ticker_interval = config['ticker_interval']
+            self.logger.info("Override strategy \'ticker_interval\' with value in config file.")
+
         self.minimal_roi = self.custom_strategy.minimal_roi
         self.stoploss = self.custom_strategy.stoploss
+        self.ticker_interval = self.custom_strategy.ticker_interval
 
     def _load_strategy(self, strategy_name: str) -> None:
         """

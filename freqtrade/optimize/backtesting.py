@@ -10,11 +10,10 @@ from tabulate import tabulate
 import freqtrade.misc as misc
 import freqtrade.optimize as optimize
 from freqtrade import exchange
-from freqtrade.analyze import populate_buy_trend, populate_sell_trend
 from freqtrade.exchange import Bittrex
 from freqtrade.main import min_roi_reached
 from freqtrade.persistence import Trade
-
+from freqtrade.strategy.strategy import Strategy
 
 logger = logging.getLogger(__name__)
 
@@ -157,8 +156,7 @@ def backtest(args) -> DataFrame:
     exchange._API = Bittrex({'key': '', 'secret': ''})
     for pair, pair_data in processed.items():
         pair_data['buy'], pair_data['sell'] = 0, 0
-        ticker = populate_sell_trend(populate_buy_trend(pair_data, strategy=strategy),
-                                     strategy=strategy)
+        ticker = strategy.populate_sell_trend(strategy.populate_buy_trend(pair_data))
         # for each buy point
         trades_count[pair] = len(ticker.index)
         last_price[pair] = ticker['close'].iloc[-1]
@@ -237,11 +235,15 @@ def start(args):
         logger.info('Using max_open_trades: %s ...', config['max_open_trades'])
         max_open_trades = config['max_open_trades']
 
+    config.update({'strategy':args.strategy})
+
     # Monkey patch config
     from freqtrade import main
     main._CONF = config
 
-    preprocessed = optimize.tickerdata_to_dataframe(data, strategy=args.strategy)
+    strategy = Strategy(config)
+
+    preprocessed = optimize.tickerdata_to_dataframe(data, strategy)
     # Print timeframe
     min_date, max_date = get_timeframe(preprocessed)
     logger.info('Measuring data from %s up to %s ...', min_date.isoformat(), max_date.isoformat())
@@ -256,7 +258,7 @@ def start(args):
                         'use_sell_signal': use_sell_signal,
                         'stoploss': config.get('stoploss'),
                         'record': args.export,
-                        'strategy': args.strategy,
+                        'strategy': strategy,
                         })
     logger.info(
         '\n==================================== BACKTESTING REPORT ====================================\n%s',  # noqa

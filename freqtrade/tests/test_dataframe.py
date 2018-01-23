@@ -2,10 +2,9 @@ import pandas
 
 import freqtrade.optimize
 from freqtrade import analyze
+from freqtrade.strategy import TEST_STRATEGY
 
 _pairs = ['BTC_ETH']
-
-TEST_STRATEGY = 'default_strategy'
 
 
 def load_dataframe_pair(pairs):

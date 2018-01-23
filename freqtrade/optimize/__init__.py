@@ -6,8 +6,8 @@ import os
 from typing import Optional, List, Dict
 from pandas import DataFrame
 from freqtrade.exchange import get_ticker_history
-from freqtrade.analyze import populate_indicators, parse_ticker_dataframe
-
+from freqtrade.analyze import parse_ticker_dataframe
+from freqtrade.strategy.strategy import Strategy
 from freqtrade import misc
 from user_data.hyperopt_conf import hyperopt_optimize_conf
 
@@ -83,9 +83,9 @@ def tickerdata_to_dataframe(data, strategy):
     return preprocessed
 
 
-def preprocess(tickerdata: Dict[str, List], strategy: str) -> Dict[str, DataFrame]:
+def preprocess(tickerdata: Dict[str, List], strategy: Strategy) -> Dict[str, DataFrame]:
     """Creates a dataframe and populates indicators for given ticker data"""
-    return {pair: populate_indicators(parse_ticker_dataframe(pair_data), strategy)
+    return {pair: strategy.populate_indicators(parse_ticker_dataframe(pair_data))
             for pair, pair_data in tickerdata.items()}
 
 

@@ -9,8 +9,7 @@ from freqtrade.exchange import Bittrex
 from freqtrade.optimize import preprocess
 from freqtrade.optimize.backtesting import backtest, generate_text_table, get_timeframe
 import freqtrade.optimize.backtesting as backtesting
-
-TEST_STRATEGY = 'default_strategy'
+from freqtrade.strategy import TEST_STRATEGY
 
 
 def trim_dictlist(dl, num):
@@ -182,7 +181,7 @@ def test_backtest_start(default_conf, mocker, caplog):
     args.ticker_interval = 1
     args.level = 10
     args.live = False
-    args.strategy = TEST_STRATEGY
+    args.strategy = TEST_STRATEGY.name
     args.datadir = None
     args.export = None
     args.timerange = '-100'  # needed due to MagicMock malleability
