@@ -235,7 +235,7 @@ def start(args):
         logger.info('Using max_open_trades: %s ...', config['max_open_trades'])
         max_open_trades = config['max_open_trades']
 
-    config.update({'strategy':args.strategy})
+    config.update({'strategy': args.strategy})
 
     # Monkey patch config
     from freqtrade import main

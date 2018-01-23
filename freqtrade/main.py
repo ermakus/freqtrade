@@ -17,7 +17,7 @@ from freqtrade import (DependencyException, OperationalException, TradeException
 from freqtrade.analyze import get_signal
 from freqtrade.fiat_convert import CryptoToFiatConverter
 from freqtrade.misc import (State, get_state, load_config, parse_args,
-                            throttle, update_state, DEFAULT_STRATEGY)
+                            throttle, update_state)
 from freqtrade.persistence import Trade
 from freqtrade.watchdog import Watchdog
 from freqtrade.strategy.strategy import Strategy
