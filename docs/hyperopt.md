@@ -14,13 +14,14 @@ parameters with Hyperopt.
 
 ## Prepare Hyperopt
 Before we start digging in Hyperopt, we recommend you to take a look at 
-your strategy file located into [user_data/strategies/](https://github.com/gcarq/freqtrade/blob/develop/user_data/strategies/test_strategy.py)
+out Hyperopt file 
+[freqtrade/optimize/hyperopt.py](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/optimize/hyperopt.py)
  
 ### 1. Configure your Guards and Triggers
-There are two places you need to change in your strategy file to add a 
-new buy strategy for testing:
-- Inside [populate_buy_trend()](https://github.com/gcarq/freqtrade/blob/develop/user_data/strategies/test_strategy.py#L278-L294).
-- Inside [hyperopt_space()](https://github.com/gcarq/freqtrade/blob/develop/user_data/strategies/test_strategy.py#L244-L297) known as `SPACE`.
+There are two places you need to change to add a new buy strategy for 
+testing:
+- Inside the [populate_buy_trend()](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/optimize/hyperopt.py#L167-L207).
+- Inside the [SPACE dict](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/optimize/hyperopt.py#L47-L94).
 
 There you have two different type of indicators: 1. `guards` and 2. 
 `triggers`.
@@ -37,10 +38,10 @@ ADX > 10*".
 
 
 If you have updated the buy strategy, means change the content of
-`populate_buy_trend()` method you have to update the `guards` and 
+`populate_buy_trend()` function you have to update the `guards` and 
 `triggers` hyperopts must used.
 
-As for an example if your `populate_buy_trend()` method is:
+As for an example if your `populate_buy_trend()` function is:
 ```python
 def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
     dataframe.loc[
@@ -55,10 +56,10 @@ Your hyperopt file must contains `guards` to find the right value for
 `(dataframe['adx'] > 65)` & and `(dataframe['plus_di'] > 0.5)`. That 
 means you will need to enable/disable triggers.
  
-In our case the `SPACE` and `populate_buy_trend` in your strategy file 
+In our case the `SPACE` and `populate_buy_trend` in hyperopt.py file 
 will be look like:
 ```python
-space = {
+SPACE = {
     'rsi': hp.choice('rsi', [
         {'enabled': False},
         {'enabled': True, 'value': hp.quniform('rsi-value', 20, 40, 1)}
@@ -81,7 +82,7 @@ space = {
 
 ... 
 
-def populate_buy_trend(self, dataframe: DataFrame) -> DataFrame:
+def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
         conditions = []
         # GUARDS AND TRENDS
         if params['adx']['enabled']:
@@ -110,13 +111,13 @@ cannot use your config file. It is also made on purpose to allow you
 testing your strategy with different configurations.
 
 The Hyperopt configuration is located in 
-[user_data/hyperopt_conf.py](https://github.com/gcarq/freqtrade/blob/develop/user_data/hyperopt_conf.py).
+[freqtrade/optimize/hyperopt_conf.py](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/optimize/hyperopt_conf.py).
 
 
 ## Advanced notions
 ### Understand the Guards and Triggers
 When you need to add the new guards and triggers to be hyperopt 
-parameters, you do this by adding them into the [hyperopt_space()](https://github.com/gcarq/freqtrade/blob/develop/user_data/strategies/test_strategy.py#L244-L297).
+parameters, you do this by adding them into the [SPACE dict](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/optimize/hyperopt.py#L47-L94).
 
 If it's a trigger, you add one line to the 'trigger' choice group and that's it.
 
@@ -148,8 +149,9 @@ for best working algo.
 
 ### Add a new Indicators
 If you want to test an indicator that isn't used by the bot currently, 
-you need to add it to your strategy file (example: [user_data/strategies/test_strategy.py](https://github.com/gcarq/freqtrade/blob/develop/user_data/strategies/test_strategy.py))
-inside the `populate_indicators()` method.
+you need to add it to 
+[freqtrade/analyze.py](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/analyze.py#L40-L70)
+inside the `populate_indicators` function.
 
 ## Execute Hyperopt
 Once you have updated your hyperopt configuration you can run it. 
@@ -163,8 +165,8 @@ python3 ./freqtrade/main.py -c config.json hyperopt
 
 ### Execute hyperopt with different ticker-data source
 If you would like to learn parameters using an alternate ticke-data that
-you have on-disk, use the `--datadir PATH` option. Default hyperopt will
-use data from directory `user_data/data`.
+you have on-disk, use the --datadir PATH option. Default hyperopt will
+use data from directory freqtrade/tests/testdata.
 
 ### Running hyperopt with smaller testset
 
@@ -268,11 +270,15 @@ customizable value.
 - and so on...
 
 
-You have to look inside your strategy file into `buy_strategy_generator()` 
-method, what those values match to.   
+You have to look from 
+[freqtrade/optimize/hyperopt.py](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/optimize/hyperopt.py#L170-L200) 
+what those values match to.   
   
 So for example you had `adx:` with the `value: 15.0` so we would look 
-at `adx`-block, that translates to the following code block:
+at `adx`-block from 
+[freqtrade/optimize/hyperopt.py](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/optimize/hyperopt.py#L178-L179). 
+That translates to the following code block to 
+[analyze.populate_buy_trend()](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/analyze.py#L73)
 ```
 (dataframe['adx'] > 15.0)
 ```
@@ -280,7 +286,7 @@ at `adx`-block, that translates to the following code block:
 So translating your whole hyperopt result to as the new buy-signal 
 would be the following:
 ```
-def populate_buy_trend(self, dataframe: DataFrame) -> DataFrame:
+def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
     dataframe.loc[
         (
             (dataframe['adx'] > 15.0) & # adx-value

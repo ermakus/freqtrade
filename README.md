@@ -156,15 +156,10 @@ optional arguments:
   --dry-run-db          Force dry run to use a local DB
                         "tradesv3.dry_run.sqlite" instead of memory DB. Work
                         only if dry_run is enabled.
-<<<<<<< HEAD
-  -w, --watchdog        Run under watchdog (restart process if main loop is
-                        stalled)
-=======
   --datadir PATH        path to backtest data (default freqdata/tests/testdata
   --dynamic-whitelist [INT]
                         dynamically generate and update whitelist based on 24h
                         BaseVolume (Default 20 currencies)
->>>>>>> a3f84d9f21c2b6bc1de4fcb5c8a7119019ba5b7c
 ```
 More details on:
 - [How to run the bot](https://github.com/gcarq/freqtrade/blob/develop/docs/bot-usage.md#bot-commands)

@@ -96,7 +96,6 @@ Possibly edit pairs.json file to include/exclude pairs
 python freqtrade/tests/testdata/download_backtest_data.py -p pairs.json
 ```
 
-=======
 The script will read your pairs.json file, and download ticker data
 into the current working directory.
 
