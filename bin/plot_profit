@@ -1,0 +1,1 @@
+python3.6 -m scripts.plot_profit --datadir user_data/data $*

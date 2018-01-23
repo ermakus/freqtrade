@@ -2,7 +2,7 @@
 import sys
 from freqtrade import exchange, analyze
 from freqtrade.misc import common_args_parser
-
+from freqtrade.strategy.strategy import Strategy
 import matplotlib  # Install PYQT5 manually if you want to test this helper function
 matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt  # noqa
@@ -37,7 +37,9 @@ def plot_analyzed_dataframe(args):
     # Init Bittrex to use public API
     exchange._API = exchange.Bittrex({'key': '', 'secret': ''})
     ticker = exchange.get_ticker_history(args.pair, args.interval)
-    dataframe = analyze.analyze_ticker(ticker, args.strategy)
+
+    strategy = Strategy({'strategy': args.strategy})
+    dataframe = analyze.analyze_ticker(ticker, strategy)
 
     dataframe.loc[dataframe['buy'] == 1, 'buy_price'] = dataframe['close']
     dataframe.loc[dataframe['sell'] == 1, 'sell_price'] = dataframe['close']

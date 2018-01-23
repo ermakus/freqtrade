@@ -5,6 +5,7 @@ import numpy as np
 
 import freqtrade.optimize as optimize
 import freqtrade.misc as misc
+from freqtrade.strategy.strategy import Strategy
 
 import matplotlib  # Install PYQT5 manually if you want to test this helper function
 matplotlib.use("Qt5Agg")
@@ -78,7 +79,8 @@ def plot_profit(args) -> None:
     tickers = optimize.load_data(args.datadir, pairs=pairs,
                                  ticker_interval=args.ticker_interval,
                                  refresh_pairs=False)
-    dataframes = optimize.preprocess(tickers, strategy=args.strategy)
+    strategy = Strategy({'strategy': args.strategy})
+    dataframes = optimize.preprocess(tickers, strategy)
 
     # Make an average close price of all the pairs that was involved.
     # this could be useful to gauge the overall market trend
