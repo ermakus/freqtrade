@@ -39,11 +39,19 @@ class Strategy(object):
 
         if 'stoploss' in config:
             self.custom_strategy.stoploss = config['stoploss']
-            self.logger.info("Override strategy \'stoploss\' with value in config file.")
+            self.logger.info(
+                "Override strategy \'stoploss\' with value in config file: {}.".format(
+                    config['stoploss']
+                )
+            )
 
         if 'ticker_interval' in config:
             self.custom_strategy.ticker_interval = config['ticker_interval']
-            self.logger.info("Override strategy \'ticker_interval\' with value in config file.")
+            self.logger.info(
+                "Override strategy \'ticker_interval\' with value in config file: {}.".format(
+                    config['ticker_interval']
+                )
+            )
 
         self.minimal_roi = self.custom_strategy.minimal_roi
         self.stoploss = self.custom_strategy.stoploss
@@ -153,15 +161,3 @@ class Strategy(object):
         :return: DataFrame with buy column
         """
         return self.custom_strategy.populate_sell_trend(dataframe)
-
-    def hyperopt_space(self) -> Dict:
-        """
-        Define your Hyperopt space for the strategy
-        """
-        return self.custom_strategy.hyperopt_space()
-
-    def buy_strategy_generator(self, params) -> None:
-        """
-        Define the buy strategy parameters to be used by hyperopt
-        """
-        return self.custom_strategy.buy_strategy_generator(params)

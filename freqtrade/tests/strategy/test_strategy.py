@@ -33,16 +33,13 @@ def test_strategy_structure():
     assert hasattr(Strategy, 'populate_indicators')
     assert hasattr(Strategy, 'populate_buy_trend')
     assert hasattr(Strategy, 'populate_sell_trend')
-    assert hasattr(Strategy, 'hyperopt_space')
-    assert hasattr(Strategy, 'buy_strategy_generator')
 
 
 def test_load_strategy(result):
     strategy = Strategy({'strategy': 'default_strategy'})
     strategy.logger = logging.getLogger(__name__)
 
-    assert not hasattr(Strategy, 'custom_strategy')
-
+    assert hasattr(strategy, 'custom_strategy')
     assert hasattr(strategy.custom_strategy, 'populate_indicators')
     assert 'adx' in strategy.populate_indicators(result)
 
@@ -66,12 +63,6 @@ def test_strategy(result):
     assert hasattr(strategy.custom_strategy, 'populate_sell_trend')
     dataframe = strategy.populate_sell_trend(strategy.populate_indicators(result))
     assert 'sell' in dataframe.columns
-
-    assert hasattr(strategy.custom_strategy, 'hyperopt_space')
-    assert 'adx' in strategy.hyperopt_space()
-
-    assert hasattr(strategy.custom_strategy, 'buy_strategy_generator')
-    assert callable(strategy.buy_strategy_generator({}))
 
 
 def test_strategy_override_minimal_roi(caplog):
@@ -102,13 +93,28 @@ def test_strategy_override_stoploss(caplog):
     assert strategy.stoploss == -0.5
     assert ('freqtrade.strategy.strategy',
             logging.INFO,
-            'Override strategy \'stoploss\' with value in config file.'
+            'Override strategy \'stoploss\' with value in config file: -0.5.'
             ) in caplog.record_tuples
 
 
 def test_strategy_invalid_name():
     with pytest.raises(ImportError):
         Strategy({'strategy': 'BAD_STRATEGY'})
+
+
+def test_strategy_override_ticker_interval(caplog):
+    config = {
+        'strategy': 'default_strategy',
+        'ticker_interval': 60
+    }
+    strategy = Strategy(config)
+
+    assert hasattr(strategy.custom_strategy, 'ticker_interval')
+    assert strategy.ticker_interval == 60
+    assert ('freqtrade.strategy.strategy',
+            logging.INFO,
+            'Override strategy \'ticker_interval\' with value in config file: 60.'
+            ) in caplog.record_tuples
 
 
 def test_strategy_singleton():
