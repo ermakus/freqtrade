@@ -37,7 +37,6 @@ def plot_analyzed_dataframe(args) -> None:
     :return: None
     """
     # Init strategy
-    strategy = Strategy()
     strategy = Strategy({'strategy': args.strategy})
 
     # Init Bittrex to use public API

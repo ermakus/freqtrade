@@ -3,7 +3,6 @@
 import logging
 import math
 import pandas as pd
-import pytest
 from unittest.mock import MagicMock
 from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex

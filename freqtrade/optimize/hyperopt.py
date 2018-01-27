@@ -7,17 +7,13 @@ import signal
 import sys
 from functools import reduce
 from math import exp
-from operator import itemgetter
 from typing import Dict, List
-
 import numpy
 import talib.abstract as ta
 from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, hp, space_eval, tpe
 from hyperopt.mongoexp import MongoTrials
 from pandas import DataFrame
-
 import freqtrade.vendor.qtpylib.indicators as qtpylib
-# Monkey patch config
 from freqtrade import main  # noqa; noqa
 from freqtrade import exchange, misc, optimize
 from freqtrade.exchange import Bittrex
@@ -59,6 +55,7 @@ TRIALS = Trials()
 main._CONF = OPTIMIZE_CONFIG
 
 STRATEGY = None
+
 
 def populate_indicators(dataframe: DataFrame) -> DataFrame:
     """
@@ -207,7 +204,6 @@ def log_trials_result(trials):
         best_parameters = {}
         best_result = 'Sorry, Hyperopt was not able to find good parameters. Please ' \
                       'try with more epochs (param: -e).'
-
 
     logger.info('Best parameters:\n%s', json.dumps(best_parameters, indent=4))
     if 'roi_t1' in best_parameters:

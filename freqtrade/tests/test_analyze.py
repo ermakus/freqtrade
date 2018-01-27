@@ -10,7 +10,6 @@ from pandas import DataFrame
 
 from freqtrade.analyze import (get_signal, parse_ticker_dataframe)
 from freqtrade.strategy import TEST_STRATEGY
-from freqtrade.strategy.strategy import Strategy
 
 
 @pytest.fixture

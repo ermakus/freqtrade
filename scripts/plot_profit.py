@@ -4,10 +4,10 @@ import json
 import numpy as np
 import freqtrade.optimize as optimize
 import freqtrade.misc as misc
+from freqtrade.strategy.strategy import Strategy
 import matplotlib  # Install PYQT5 manually if you want to test this helper function
 matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt  # noqa
-from freqtrade.strategy.strategy import Strategy
 
 
 def plot_parse_args(args):
