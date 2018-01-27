@@ -18,11 +18,10 @@ def test_default_strategy_class_name():
 def test_default_strategy_structure():
     assert hasattr(DefaultStrategy, 'minimal_roi')
     assert hasattr(DefaultStrategy, 'stoploss')
+    assert hasattr(DefaultStrategy, 'ticker_interval')
     assert hasattr(DefaultStrategy, 'populate_indicators')
     assert hasattr(DefaultStrategy, 'populate_buy_trend')
     assert hasattr(DefaultStrategy, 'populate_sell_trend')
-    assert hasattr(DefaultStrategy, 'hyperopt_space')
-    assert hasattr(DefaultStrategy, 'buy_strategy_generator')
 
 
 def test_default_strategy(result):
@@ -30,9 +29,8 @@ def test_default_strategy(result):
 
     assert type(strategy.minimal_roi) is dict
     assert type(strategy.stoploss) is float
+    assert type(strategy.ticker_interval) is int
     indicators = strategy.populate_indicators(result)
     assert type(indicators) is DataFrame
     assert type(strategy.populate_buy_trend(indicators)) is DataFrame
     assert type(strategy.populate_sell_trend(indicators)) is DataFrame
-    assert type(strategy.hyperopt_space()) is dict
-    assert callable(strategy.buy_strategy_generator({}))

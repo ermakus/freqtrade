@@ -2,11 +2,9 @@
 import sys
 import json
 import numpy as np
-
 import freqtrade.optimize as optimize
 import freqtrade.misc as misc
 from freqtrade.strategy.strategy import Strategy
-
 import matplotlib  # Install PYQT5 manually if you want to test this helper function
 matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt  # noqa
@@ -70,16 +68,21 @@ def plot_profit(args) -> None:
     filter_pairs = args.pair
 
     config = misc.load_config(args.config)
+    config.update({'strategy': args.strategy})
+
+    # Init strategy
+    strategy = Strategy(config)
+
     pairs = config['exchange']['pair_whitelist']
+
     if filter_pairs:
         filter_pairs = filter_pairs.split(',')
         pairs = list(set(pairs) & set(filter_pairs))
         print('Filter, keep pairs %s' % pairs)
 
     tickers = optimize.load_data(args.datadir, pairs=pairs,
-                                 ticker_interval=args.ticker_interval,
+                                 ticker_interval=strategy.ticker_interval,
                                  refresh_pairs=False)
-    strategy = Strategy({'strategy': args.strategy})
     dataframes = optimize.preprocess(tickers, strategy)
 
     # Make an average close price of all the pairs that was involved.
