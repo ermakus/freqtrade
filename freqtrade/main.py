@@ -67,7 +67,7 @@ def process_maybe_execute_buy(strategy):
         if create_trade(float(_CONF['stake_amount']), strategy):
             return True
 
-        logger.info(
+        logger.debug(
             'Checked all whitelisted currencies. '
             'Found no suitable entry positions for buying. Will keep looking ...'
         )

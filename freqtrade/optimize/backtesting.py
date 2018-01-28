@@ -187,15 +187,14 @@ def backtest(args) -> DataFrame:
                                         row.date.strftime('%s'),
                                         row2.date.strftime('%s'),
                                         row.Index, trade_entry[3]))
+    if args.get('liquidate', False):
+        trades += liquidate(active_trades, last_price, trades_count)
 
     # For now export inside backtest(), maybe change so that backtest()
     # returns a tuple like: (dataframe, records, logs, etc)
-    if record and record.find('trades') >= 0:
+    if record:
         logger.info('Dumping backtest results')
         misc.file_dump_json('backtest-result.json', records)
-
-    if realistic:
-        trades += liquidate(active_trades, last_price, trades_count)
 
     labels = ['currency', 'profit_percent', 'profit_BTC', 'duration', 'profit', 'loss']
     return DataFrame.from_records(trades, columns=labels)
@@ -212,6 +211,15 @@ def start(args):
 
     logger.info('Using config: %s ...', args.config)
     config = misc.load_config(args.config)
+
+    config.update({'strategy': args.strategy})
+
+    # Monkey patch config
+    from freqtrade import main
+    main._CONF = config
+
+    strategy = Strategy(config)
+
     ticker_interval = config.get('ticker_interval', args.ticker_interval)
     logger.info('Using ticker_interval: %s ...', ticker_interval)
 
@@ -227,21 +235,13 @@ def start(args):
         logger.info('Using stake_amount: %s ...', config['stake_amount'])
 
         timerange = misc.parse_timerange(args.timerange)
-        data = optimize.load_data(args.datadir, pairs=pairs, ticker_interval=args.ticker_interval,
+        data = optimize.load_data(args.datadir, pairs=pairs, ticker_interval=ticker_interval,
                                   refresh_pairs=args.refresh_pairs,
                                   timerange=timerange)
     max_open_trades = 0
     if args.realistic_simulation:
         logger.info('Using max_open_trades: %s ...', config['max_open_trades'])
         max_open_trades = config['max_open_trades']
-
-    config.update({'strategy': args.strategy})
-
-    # Monkey patch config
-    from freqtrade import main
-    main._CONF = config
-
-    strategy = Strategy(config)
 
     preprocessed = optimize.tickerdata_to_dataframe(data, strategy)
     # Print timeframe
@@ -261,9 +261,10 @@ def start(args):
                         'use_sell_signal': use_sell_signal,
                         'stoploss': strategy.stoploss,
                         'record': args.export,
+                        'liquidate': args.liquidate,
                         'strategy': strategy,
                         })
     logger.info(
         '\n==================================== BACKTESTING REPORT ====================================\n%s',  # noqa
-        generate_text_table(data, results, config['stake_currency'], args.ticker_interval)
+        generate_text_table(data, results, config['stake_currency'], ticker_interval)
     )

@@ -5,7 +5,6 @@ import matplotlib.dates as mdates
 import numpy as np
 import freqtrade.optimize as optimize
 import freqtrade.misc as misc
-import freqtrade.exchange as exchange
 from freqtrade.strategy.strategy import Strategy
 import matplotlib  # Install PYQT5 manually if you want to test this helper function
 matplotlib.use("Qt5Agg")
@@ -104,7 +103,8 @@ def plot_profit(args) -> None:
         maxprice = max(close)  # Normalize price to [0,1]
         print('Pair %s has length %s' % (pair, len(close)))
         for x in range(0, len(close)):
-            if x >= max_x: break
+            if x >= max_x:
+                break  # FIXME?
             avgclose[x] += close[x] / maxprice
         # avgclose += close
         num += 1

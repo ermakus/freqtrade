@@ -245,10 +245,8 @@ def backtesting_options(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         '--export',
-        help='Export backtest results, argument are: trades\
-              Example --export=trades',
-        type=str,
-        default=None,
+        help='Export backtest results',
+        action='store_true',
         dest='export',
     )
     parser.add_argument(
@@ -257,6 +255,12 @@ def backtesting_options(parser: argparse.ArgumentParser) -> None:
         default=None,
         type=str,
         dest='timerange',
+    )
+    parser.add_argument(
+        '--liquidate',
+        help='Sell all open trades at end.',
+        action='store_true',
+        dest='liquidate'
     )
 
 

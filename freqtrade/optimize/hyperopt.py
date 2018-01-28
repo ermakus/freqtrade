@@ -7,9 +7,7 @@ import signal
 import sys
 from functools import reduce
 from math import exp
-from operator import itemgetter
 from typing import Dict, Any, Callable
-
 import numpy
 import talib.abstract as ta
 from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, hp, space_eval, tpe

@@ -42,6 +42,9 @@ class BaseStrategy(IStrategy):
     # This attribute will be overridden if the config file contains "stoploss"
     stoploss = -0.9
 
+    # Default ticker
+    ticker_interval = 5
+
     def populate_indicators(self, dataframe: DataFrame) -> DataFrame:
         """
         Adds several different TA indicators to the given DataFrame

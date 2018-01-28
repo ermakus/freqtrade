@@ -1,23 +1,14 @@
 #!/usr/bin/env python3
 import sys
 import logging
-import argparse
-
-import matplotlib
-matplotlib.use("Qt5Agg")
-import matplotlib.dates as mdates
-import matplotlib.pyplot as plt
-from pandas import DataFrame
-import talib.abstract as ta
-
-import freqtrade.vendor.qtpylib.indicators as qtpylib
-from freqtrade import exchange, analyze
-from freqtrade.misc import common_args_parser
+from freqtrade import exchange
 from freqtrade.strategy.strategy import Strategy
 import freqtrade.misc as misc
 import freqtrade.optimize as optimize
-import freqtrade.analyze as analyze
-
+import matplotlib
+matplotlib.use("Qt5Agg")
+import matplotlib.dates as mdates  # noqa
+import matplotlib.pyplot as plt  # noqa
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +26,7 @@ def plot_analyzed_dataframe(args) -> None:
     :param pair: pair as str
     :return: None
     """
-    pair = args.pair
+    pair = args.pair or "BTC_ETC"
     pairs = [pair]
     timerange = misc.parse_timerange(args.timerange)
 
@@ -62,7 +53,7 @@ def plot_analyzed_dataframe(args) -> None:
 
     # Two subplots sharing x axis
     fig, (ax1, ax2, ax3) = plt.subplots(3, sharex=True)
-    fig.suptitle(pair + " " +     str(tick_interval), fontsize=14, fontweight='bold')
+    fig.suptitle(pair + " " + str(tick_interval), fontsize=14, fontweight='bold')
 
     ax1.plot(dates, dataframe['close'], label='close')
     # ax1.plot(dates, dataframe['sell'], 'ro', label='sell')
@@ -92,6 +83,7 @@ def plot_analyzed_dataframe(args) -> None:
     fig.autofmt_xdate()  # Rotate the dates
     plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
     plt.show()
+
 
 if __name__ == '__main__':
     args = plot_parse_args(sys.argv[1:])
