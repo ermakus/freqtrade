@@ -21,15 +21,12 @@ class Strategy(object):
     DEFAULT_STRATEGY = 'default_strategy'
 
     def __init__(self, config):
+        self.logger = None
+        self.minimal_roi = None
+        self.stoploss = None
+        self.ticker_interval = None
+        self.custom_strategy = None
         self.init(config)
-
-    def __init__(self):
-        if Strategy.__instance is None:
-            self.logger = None
-            self.minimal_roi = None
-            self.stoploss = None
-            self.ticker_interval = None
-            self.custom_strategy = None
 
     def init(self, config):
         """
