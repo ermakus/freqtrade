@@ -1,9 +1,9 @@
-# pragma pylint: disable=missing-docstring,W0212
+# pragma pylint: disable=missing-docstring, W0212, line-too-long, C0103
 
 import logging
 import math
-import pandas as pd
 from unittest.mock import MagicMock
+import pandas as pd
 from freqtrade import exchange, optimize
 from freqtrade.exchange import Bittrex
 from freqtrade.optimize import preprocess
@@ -12,9 +12,9 @@ import freqtrade.optimize.backtesting as backtesting
 from freqtrade.strategy import TEST_STRATEGY
 
 
-def trim_dictlist(dl, num):
+def trim_dictlist(dict_list, num):
     new = {}
-    for pair, pair_data in dl.items():
+    for pair, pair_data in dict_list.items():
         new[pair] = pair_data[num:]
     return new
 

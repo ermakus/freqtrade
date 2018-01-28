@@ -1,4 +1,4 @@
-# pragma pylint: disable=missing-docstring,W0212
+# pragma pylint: disable=missing-docstring, protected-access, C0103
 
 import os
 import logging
@@ -56,8 +56,7 @@ def test_load_data_30min_ticker(default_conf, ticker_history, mocker, caplog):
     assert os.path.isfile(file) is True
     assert ('freqtrade.optimize',
             logging.INFO,
-            'Download the pair: "BTC_ETH", Interval: 30 min'
-            ) not in caplog.record_tuples
+            'Download the pair: "BTC_ETH", Interval: 30 min') not in caplog.record_tuples
     _clean_test_file(file)
 
 
@@ -73,8 +72,7 @@ def test_load_data_5min_ticker(default_conf, ticker_history, mocker, caplog):
     assert os.path.isfile(file) is True
     assert ('freqtrade.optimize',
             logging.INFO,
-            'Download the pair: "BTC_ETH", Interval: 5 min'
-            ) not in caplog.record_tuples
+            'Download the pair: "BTC_ETH", Interval: 5 min') not in caplog.record_tuples
     _clean_test_file(file)
 
 
@@ -90,8 +88,7 @@ def test_load_data_1min_ticker(default_conf, ticker_history, mocker, caplog):
     assert os.path.isfile(file) is True
     assert ('freqtrade.optimize',
             logging.INFO,
-            'Download the pair: "BTC_ETH", Interval: 1 min'
-            ) not in caplog.record_tuples
+            'Download the pair: "BTC_ETH", Interval: 1 min') not in caplog.record_tuples
     _clean_test_file(file)
 
 
@@ -107,8 +104,7 @@ def test_load_data_with_new_pair_1min(default_conf, ticker_history, mocker, capl
     assert os.path.isfile(file) is True
     assert ('freqtrade.optimize',
             logging.INFO,
-            'Download the pair: "BTC_MEME", Interval: 1 min'
-            ) in caplog.record_tuples
+            'Download the pair: "BTC_MEME", Interval: 1 min') in caplog.record_tuples
     _clean_test_file(file)
 
 
@@ -174,8 +170,7 @@ def test_download_pairs_exception(default_conf, ticker_history, mocker, caplog):
     _clean_test_file(file1_5)
     assert ('freqtrade.optimize.__init__',
             logging.INFO,
-            'Failed to download the pair: "BTC-MEME", Interval: 1 min'
-            ) in caplog.record_tuples
+            'Failed to download the pair: "BTC-MEME", Interval: 1 min') in caplog.record_tuples
 
 
 def test_download_backtesting_testdata(default_conf, ticker_history, mocker):

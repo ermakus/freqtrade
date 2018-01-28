@@ -1,5 +1,6 @@
-import pandas
+# pragma pylint: disable=missing-docstring, C0103
 
+import pandas
 import freqtrade.optimize
 from freqtrade import analyze
 from freqtrade.strategy import TEST_STRATEGY

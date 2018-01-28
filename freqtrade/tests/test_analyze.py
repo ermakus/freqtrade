@@ -1,21 +1,13 @@
-# pragma pylint: disable=missing-docstring,W0621
+# pragma pylint: disable=missing-docstring, C0103
 import datetime
-import json
 from unittest.mock import MagicMock
 
 import arrow
-import pytest
 from pandas import DataFrame
 
 from freqtrade.analyze import (get_signal, parse_ticker_dataframe)
 from freqtrade.strategy import TEST_STRATEGY
 import freqtrade.tests.conftest as tt  # test tools
-
-
-@pytest.fixture
-def result():
-    with open('freqtrade/tests/testdata/BTC_ETH-1.json') as data_file:
-        return parse_ticker_dataframe(json.load(data_file))
 
 
 def test_dataframe_correct_columns(result):
