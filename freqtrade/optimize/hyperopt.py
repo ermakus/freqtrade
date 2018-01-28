@@ -7,7 +7,9 @@ import signal
 import sys
 from functools import reduce
 from math import exp
-from typing import Dict, List
+from operator import itemgetter
+from typing import Dict, Any, Callable
+
 import numpy
 import talib.abstract as ta
 from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, hp, space_eval, tpe
@@ -29,7 +31,7 @@ logging.getLogger('hyperopt.tpe').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-# set TARGET_TRADES to suit your number concurrent trades so its realistic to 20days of data
+# set TARGET_TRADES to suit your number concurrent trades so its realistic to the number of days
 TARGET_TRADES = 600
 TOTAL_TRIES = 0
 _CURRENT_TRIES = 0
@@ -235,7 +237,7 @@ def calculate_loss(total_profit: float, trade_count: int, trade_duration: float)
     return trade_loss + profit_loss + duration_loss
 
 
-def generate_roi_table(params):
+def generate_roi_table(params) -> Dict[str, float]:
     roi_table = {}
     roi_table["0"] = params['roi_p1'] + params['roi_p2'] + params['roi_p3']
     roi_table[str(params['roi_t3'])] = params['roi_p1'] + params['roi_p2']
@@ -245,7 +247,7 @@ def generate_roi_table(params):
     return roi_table
 
 
-def roi_space() -> List[Dict]:
+def roi_space() -> Dict[str, Any]:
     return {
         'roi_t1': hp.quniform('roi_t1', 10, 220, 10),
         'roi_t2': hp.quniform('roi_t2', 10, 120, 10),
@@ -256,13 +258,13 @@ def roi_space() -> List[Dict]:
     }
 
 
-def stoploss_space() -> Dict:
+def stoploss_space() -> Dict[str, Any]:
     return {
         'stoploss': hp.uniform('stoploss', -0.5, -0.02),
     }
 
 
-def indicator_space() -> List[Dict]:
+def indicator_space() -> Dict[str, Any]:
     """
     Define your Hyperopt space for searching strategy parameters
     """
@@ -322,11 +324,11 @@ def indicator_space() -> List[Dict]:
     }
 
 
-def hyperopt_space() -> List[Dict]:
+def hyperopt_space() -> Dict[str, Any]:
     return {**indicator_space(), **roi_space(), **stoploss_space()}
 
 
-def buy_strategy_generator(params) -> None:
+def buy_strategy_generator(params: Dict[str, Any]) -> Callable:
     """
     Define the buy strategy parameters to be used by hyperopt
     """
