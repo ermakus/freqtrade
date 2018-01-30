@@ -1,3 +1,5 @@
+# pragma pylint: disable=attribute-defined-outside-init
+
 """
 This module load custom strategies
 """
@@ -28,7 +30,7 @@ class Strategy(object):
         self.custom_strategy = None
         self.init(config)
 
-    def init(self, config):
+    def init(self, config: dict) -> None:
         """
         Load the custom class from config parameter
         :param config:

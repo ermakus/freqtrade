@@ -11,7 +11,7 @@ import freqtrade.misc as misc
 import freqtrade.optimize as optimize
 from freqtrade import exchange
 from freqtrade.exchange import Bittrex
-from freqtrade.main import min_roi_reached
+from freqtrade.main import should_sell
 from freqtrade.persistence import Trade
 from freqtrade.strategy.strategy import Strategy
 
@@ -49,8 +49,8 @@ def generate_text_table(
             result.profit_percent.mean() * 100.0,
             result.profit_BTC.sum(),
             result.duration.mean() * ticker_interval,
-            result.profit.sum(),
-            result.loss.sum()
+            len(result[result.profit_BTC > 0]),
+            len(result[result.profit_BTC < 0])
         ])
 
     # Append Total
@@ -60,51 +60,41 @@ def generate_text_table(
         results.profit_percent.mean() * 100.0,
         results.profit_BTC.sum(),
         results.duration.mean() * ticker_interval,
-        results.profit.sum(),
-        results.loss.sum()
+        len(results[results.profit_BTC > 0]),
+        len(results[results.profit_BTC < 0])
     ])
     return tabulate(tabular_data, headers=headers, floatfmt=floatfmt)
 
 
-def get_trade_entry(pair, row, ticker, trade_count_lock, args, active_trades):
+def get_sell_trade_entry(pair, row, buy_subset, ticker, trade_count_lock, args):
     stake_amount = args['stake_amount']
     max_open_trades = args.get('max_open_trades', 0)
-    sell_profit_only = args.get('sell_profit_only', False)
-    stoploss = args.get('stoploss', -1)
-    use_sell_signal = args.get('use_sell_signal', False)
-    trade = Trade(id=row.Index,
-                  pair=pair,
-                  open_rate=row.close,
+    trade = Trade(open_rate=row.close,
                   open_date=row.date,
                   stake_amount=stake_amount,
                   amount=stake_amount / row.open,
-                  fee=exchange.get_fee()
-                  )
-    active_trades.append(trade)
+                  fee=exchange.get_fee(),
+                  pair=pair,
+                  id=row.Index)
     # calculate win/lose forwards from buy point
-    sell_subset = ticker[row.Index + 1:][['close', 'date', 'sell']]
-    row2 = None
+    last_date = None
+    sell_subset = ticker[ticker.date > row.date][['close', 'date', 'sell']]
     for row2 in sell_subset.itertuples(index=True):
+
+        last_date = row2.date
+
         if max_open_trades > 0:
             # Increase trade_count_lock for every iteration
             trade_count_lock[row2.date] = trade_count_lock.get(row2.date, 0) + 1
-
-        current_profit_percent = trade.calc_profit_percent(rate=row2.close)
-        if (sell_profit_only and current_profit_percent < 0):
-            continue
-        if min_roi_reached(trade, row2.close, row2.date, args['strategy']) or \
-            (row2.sell == 1 and use_sell_signal) or \
-                current_profit_percent <= stoploss:
-            current_profit_btc = trade.calc_profit(rate=row2.close)
-            active_trades.remove(trade)
+ 
+        buy_signal = buy_subset[buy_subset.date == row2.date].empty
+        if(should_sell(trade, row2.close, row2.date, buy_signal, row2.sell, args['strategy'])):
             return row2, (pair,
-                          current_profit_percent,
-                          current_profit_btc,
-                          row2.Index - row.Index,
-                          current_profit_btc > 0,
-                          current_profit_btc < 0
-                          )
-    return row2, None
+                          trade.calc_profit_percent(rate=row2.close),
+                          trade.calc_profit(rate=row2.close),
+                          row2.Index - row.Index
+                          ), row2.date, trade
+    return None, None, last_date, trade
 
 
 def liquidate(active_trades, last_price, trades_count):
@@ -121,9 +111,7 @@ def liquidate(active_trades, last_price, trades_count):
                 trade.pair,
                 profit_percent,
                 profit_btc,
-                count - trade.id,
-                profit_btc > 0,
-                profit_btc < 0
+                count - trade.id
             )
         )
     return trades
@@ -161,10 +149,11 @@ def backtest(args) -> DataFrame:
         trades_count[pair] = len(ticker.index)
         last_price[pair] = ticker['close'].iloc[-1]
         lock_pair_until = None
-        buy_subset = ticker[ticker.buy == 1][['buy', 'open', 'close', 'date', 'sell']]
+        headers = ['buy', 'open', 'close', 'date', 'sell']
+        buy_subset = ticker[(ticker.buy == 1) & (ticker.sell == 0)][headers]
         for row in buy_subset.itertuples(index=True):
             if realistic:
-                if lock_pair_until is not None and row.Index <= lock_pair_until:
+                if lock_pair_until is not None and row.date <= lock_pair_until:
                     continue
             if max_open_trades > 0:
                 # Check if max_open_trades has already been reached for the given date
@@ -173,20 +162,24 @@ def backtest(args) -> DataFrame:
                 # Increase lock
                 trade_count_lock[row.date] = trade_count_lock.get(row.date, 0) + 1
 
-            row2, trade_entry = get_trade_entry(pair, row, ticker, trade_count_lock,
-                                                args, active_trades)
+            row2, trade_entry, next_date, trade = get_sell_trade_entry(pair, row, buy_subset, ticker,
+                                                                       trade_count_lock, args)
+
+            lock_pair_until = next_date
+
             if row2:
-                lock_pair_until = row2.Index
-                if trade_entry:
-                    trades.append(trade_entry)
-                    if record:
-                        # Note, need to be json.dump friendly
-                        # record a tuple of pair, current_profit_percent,
-                        # entry-date, duration
-                        records.append((pair, trade_entry[1],
-                                        row.date.strftime('%s'),
-                                        row2.date.strftime('%s'),
-                                        row.Index, trade_entry[3]))
+                trades.append(trade_entry)
+                if record:
+                    # Note, need to be json.dump friendly
+                    # record a tuple of pair, current_profit_percent,
+                    # entry-date, duration
+                    records.append((pair, trade_entry[1],
+                                    row.date.strftime('%s'),
+                                    row2.date.strftime('%s'),
+                                    row.Index, trade_entry[3]))
+            else:
+                active_trades.append( trade )
+
     if args.get('liquidate', False):
         trades += liquidate(active_trades, last_price, trades_count)
 
@@ -196,7 +189,7 @@ def backtest(args) -> DataFrame:
         logger.info('Dumping backtest results')
         misc.file_dump_json('backtest-result.json', records)
 
-    labels = ['currency', 'profit_percent', 'profit_BTC', 'duration', 'profit', 'loss']
+    labels = ['currency', 'profit_percent', 'profit_BTC', 'duration']
     return DataFrame.from_records(trades, columns=labels)
 
 

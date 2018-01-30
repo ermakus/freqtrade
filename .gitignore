@@ -7,6 +7,9 @@ config.*json
 logfile.txt
 nohup.out
 user_data/data
+freqtrade-plot.html
+freqtrade-profit-plot.html
+backtest-result.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

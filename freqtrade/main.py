@@ -311,6 +311,31 @@ def min_roi_reached(trade: Trade, current_rate: float,
     return False
 
 
+def should_sell(trade: Trade, rate: float, date: datetime, buy: bool, sell: bool,
+                strategy: Strategy) -> bool:
+    """
+    This function evaluate if on the condition required to trigger a sell has been reached
+    if the threshold is reached and updates the trade record.
+    :return: True if trade should be sold, False otherwise
+    """
+    # Check if minimal roi has been reached and no longer in buy conditions (avoiding a fee)
+    if min_roi_reached(trade, rate, date, strategy):
+        logger.debug('Executing sell due to ROI ...')
+        return True
+
+    # Experimental: Check if the trade is profitable before selling it (avoid selling at loss)
+    if _CONF.get('experimental', {}).get('sell_profit_only', False):
+        logger.debug('Checking if trade is profitable ...')
+        if trade.calc_profit(rate=rate) <= 0:
+            return False
+
+    if sell and not buy and _CONF.get('experimental', {}).get('use_sell_signal', False):
+        logger.debug('Executing sell due to sell signal ...')
+        return True
+
+    return False
+
+
 def handle_trade(trade: Trade, strategy: Strategy) -> bool:
     """
     Sells the current pair if the threshold is reached and updates the trade record.
@@ -327,20 +352,7 @@ def handle_trade(trade: Trade, strategy: Strategy) -> bool:
     if _CONF.get('experimental', {}).get('use_sell_signal'):
         (buy, sell) = get_signal(trade.pair, strategy)
 
-    # Check if minimal roi has been reached and no longer in buy conditions (avoiding a fee)
-    if not buy and min_roi_reached(trade, current_rate, datetime.utcnow(), strategy):
-        logger.debug('Executing sell due to ROI ...')
-        execute_sell(trade, current_rate)
-        return True
-
-    # Experimental: Check if the trade is profitable before selling it (avoid selling at loss)
-    if _CONF.get('experimental', {}).get('sell_profit_only', False):
-        logger.debug('Checking if trade is profitable ...')
-        if not buy and trade.calc_profit(rate=current_rate) <= 0:
-            return False
-
-    if sell and not buy:
-        logger.debug('Executing sell due to sell signal ...')
+    if should_sell(trade, current_rate, datetime.utcnow(), buy, sell, strategy):
         execute_sell(trade, current_rate)
         return True
 
